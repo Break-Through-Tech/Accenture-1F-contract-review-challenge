@@ -453,3 +453,38 @@ The main justification is:
 > It preserves over 99% of CUAD's annotated clause spans while keeping chunks reasonably small and adding only about 17% duplicated text.
 
 Once the final transformer is chosen, repeat the same experiment using the model's actual tokenizer rather than word counts.
+
+---
+
+# Tokenizer-Based Follow-Up
+
+The original Week 3 experiment used whitespace-delimited words. I later repeated the analysis in tokenizer space using `bert-base-uncased`.
+
+The token-based experiment compared fixed-window and paragraph-aware strategies across several chunk sizes and overlaps.
+
+The current tokenizer-based recommendation is:
+
+> **Paragraph-aware chunking with a maximum of 480 raw tokens and 64 tokens of overlap.**
+
+Results:
+
+| Metric | Train | Test |
+|---|---:|---:|
+| Annotation coverage | **98.92%** | **99.36%** |
+| Split spans | 121 / 11,180 | 17 / 2,643 |
+| Avg. chunks per contract | 28.83 | 25.12 |
+| Avg. chunk size | 427.5 tokens | 425.0 tokens |
+| Maximum chunk size | 480 tokens | 480 tokens |
+| Token redundancy | 1.106x | 1.109x |
+
+Paragraph-aware token chunking substantially outperformed fixed-token windows at comparable sizes.
+
+A 512-token paragraph-aware strategy achieved similarly strong coverage, but 480 tokens was selected because it leaves room under a typical 512-token transformer limit for special tokens and other model formatting.
+
+The final production setting should still be rerun using the tokenizer belonging to the team's final selected transformer.
+
+### Chunk labeling
+
+For downstream training, a category should be considered positive for a chunk only when its annotated span is fully contained in that chunk.
+
+If a labeled span only partially overlaps a chunk boundary, that category should be treated as ambiguous/masked for that chunk rather than as a clean negative.
