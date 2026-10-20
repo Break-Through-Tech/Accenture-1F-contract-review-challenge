@@ -1,0 +1,6 @@
+# Task #2 training pipeline (Colab already ships torch/transformers; this fills any gaps)
+torch
+transformers>=4.40
+pandas
+numpy
+scikit-learn
