@@ -177,6 +177,8 @@ The project uses a **paragraph-aware chunking strategy** based on:
 
 The overlap helps preserve clauses that occur near chunk boundaries.
 
+With DistilRoBERTa, **98.6% of annotated train spans and 99.2% of test spans** fit entirely inside a single chunk. An earlier version of the chunker miscounted tokens under RoBERTa's tokenizer and silently dropped about 1% of contract text (coverage about 95–96%). See [`Week 3/CHUNKER_TOKEN_COUNT_FIX.md`](Week%203/CHUNKER_TOKEN_COUNT_FIX.md). `prepare_dataset.py` now fails if any contract text is left out of the chunks, and reports coverage in `chunking_summary.csv`.
+
 ### Chunk Labeling
 
 Each chunk-category pair is labeled using the CUAD answer spans:
@@ -202,6 +204,7 @@ train_tokenized.pt
 test_tokenized.pt
 labels.json
 dataset_summary.csv
+chunking_summary.csv
 ```
 
 Generated data is excluded from Git tracking and can be regenerated from the scripts.
@@ -358,6 +361,12 @@ Actual clause-level risk may vary based on:
 ├── data/
 │   └── cuad/
 │
+├── Week 3/
+│   ├── tokenizer_chunking_experiment.py
+│   ├── TOKENIZER_CHUNKING_NEXT_STEP.md
+│   ├── CHUNKER_TOKEN_COUNT_FIX.md
+│   └── ...
+│
 ├── evaluation/
 │   ├── risk_categories.csv
 │   └── risk_rubric.md
@@ -437,10 +446,10 @@ For GPU training, use the provided Google Colab notebook and select a **T4 GPU**
 - initial Low / Medium / High risk rubric
 - paragraph-aware tokenization pipeline
 - DistilRoBERTa training pipeline implementation
+- final tokenized dataset generated and validated (chunker token-count fix, ~99% span coverage)
 
 ### In Progress
 
-- generating and validating the final tokenized dataset
 - running the initial DistilRoBERTa training baseline
 - testing class-imbalance handling approaches
 - comparing transformer performance against TF-IDF
