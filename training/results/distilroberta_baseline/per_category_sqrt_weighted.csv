@@ -1,0 +1,165 @@
+category,support,predicted,precision,recall,f1,level,threshold_scheme
+Affiliate License-Licensee,20,56,0.25,0.7,0.368,chunk,0.5
+Affiliate License-Licensor,16,15,0.333,0.312,0.323,chunk,0.5
+Agreement Date,96,141,0.589,0.865,0.7,chunk,0.5
+Anti-Assignment,103,140,0.607,0.825,0.7,chunk,0.5
+Audit Rights,67,83,0.566,0.701,0.627,chunk,0.5
+Cap On Liability,82,85,0.694,0.72,0.707,chunk,0.5
+Change Of Control,43,57,0.158,0.209,0.18,chunk,0.5
+Competitive Restriction Exception,20,59,0.203,0.6,0.304,chunk,0.5
+Covenant Not To Sue,40,82,0.244,0.5,0.328,chunk,0.5
+Document Name,106,142,0.641,0.858,0.734,chunk,0.5
+Effective Date,87,165,0.352,0.667,0.46,chunk,0.5
+Exclusivity,60,170,0.265,0.75,0.391,chunk,0.5
+Expiration Date,88,99,0.768,0.864,0.813,chunk,0.5
+Governing Law,98,126,0.69,0.888,0.777,chunk,0.5
+Insurance,57,75,0.707,0.93,0.803,chunk,0.5
+Ip Ownership Assignment,47,137,0.175,0.511,0.261,chunk,0.5
+Irrevocable Or Perpetual License,21,55,0.291,0.762,0.421,chunk,0.5
+Joint Ip Ownership,10,41,0.073,0.3,0.118,chunk,0.5
+License Grant,105,147,0.592,0.829,0.69,chunk,0.5
+Liquidated Damages,19,10,0.8,0.421,0.552,chunk,0.5
+Minimum Commitment,72,121,0.331,0.556,0.415,chunk,0.5
+Most Favored Nation,3,3,0.0,0.0,0.0,chunk,0.5
+No-Solicit Of Customers,16,24,0.292,0.438,0.35,chunk,0.5
+No-Solicit Of Employees,14,35,0.343,0.857,0.49,chunk,0.5
+Non-Compete,45,90,0.378,0.756,0.504,chunk,0.5
+Non-Disparagement,9,29,0.069,0.222,0.105,chunk,0.5
+Non-Transferable License,33,90,0.267,0.727,0.39,chunk,0.5
+Notice Period To Terminate Renewal,17,60,0.233,0.824,0.364,chunk,0.5
+Parties,146,164,0.768,0.863,0.813,chunk,0.5
+Post-Termination Services,60,157,0.191,0.5,0.276,chunk,0.5
+Price Restrictions,0,0,0.0,0.0,0.0,chunk,0.5
+Renewal Term,27,72,0.375,1.0,0.545,chunk,0.5
+Revenue/Profit Sharing,62,113,0.425,0.774,0.549,chunk,0.5
+Rofr/Rofo/Rofn,37,71,0.211,0.405,0.278,chunk,0.5
+Source Code Escrow,2,0,0.0,0.0,0.0,chunk,0.5
+Termination For Convenience,37,120,0.217,0.703,0.331,chunk,0.5
+Third Party Beneficiary,10,1,0.0,0.0,0.0,chunk,0.5
+Uncapped Liability,14,51,0.235,0.857,0.369,chunk,0.5
+Unlimited/All-You-Can-Eat-License,3,0,0.0,0.0,0.0,chunk,0.5
+Volume Restriction,24,60,0.167,0.417,0.238,chunk,0.5
+Warranty Duration,12,21,0.333,0.583,0.424,chunk,0.5
+Affiliate License-Licensee,12,35,0.257,0.75,0.383,contract,0.5
+Affiliate License-Licensor,6,9,0.222,0.333,0.267,contract,0.5
+Agreement Date,93,99,0.909,0.968,0.938,contract,0.5
+Anti-Assignment,72,75,0.92,0.958,0.939,contract,0.5
+Audit Rights,38,43,0.744,0.842,0.79,contract,0.5
+Cap On Liability,44,52,0.808,0.955,0.875,contract,0.5
+Change Of Control,26,33,0.455,0.577,0.508,contract,0.5
+Competitive Restriction Exception,16,30,0.467,0.875,0.609,contract,0.5
+Covenant Not To Sue,24,36,0.5,0.75,0.6,contract,0.5
+Document Name,102,99,1.0,0.971,0.985,contract,0.5
+Effective Date,70,99,0.697,0.986,0.817,contract,0.5
+Exclusivity,33,56,0.518,0.879,0.652,contract,0.5
+Expiration Date,78,75,0.973,0.936,0.954,contract,0.5
+Governing Law,83,80,0.988,0.952,0.969,contract,0.5
+Insurance,32,37,0.811,0.938,0.87,contract,0.5
+Ip Ownership Assignment,23,50,0.4,0.87,0.548,contract,0.5
+Irrevocable Or Perpetual License,13,36,0.333,0.923,0.49,contract,0.5
+Joint Ip Ownership,7,27,0.185,0.714,0.294,contract,0.5
+License Grant,50,55,0.873,0.96,0.914,contract,0.5
+Liquidated Damages,14,10,0.9,0.643,0.75,contract,0.5
+Minimum Commitment,32,44,0.659,0.906,0.763,contract,0.5
+Most Favored Nation,3,3,0.0,0.0,0.0,contract,0.5
+No-Solicit Of Customers,7,16,0.25,0.571,0.348,contract,0.5
+No-Solicit Of Employees,10,22,0.455,1.0,0.625,contract,0.5
+Non-Compete,23,39,0.538,0.913,0.677,contract,0.5
+Non-Disparagement,7,18,0.167,0.429,0.24,contract,0.5
+Non-Transferable License,22,46,0.435,0.909,0.588,contract,0.5
+Notice Period To Terminate Renewal,16,54,0.278,0.938,0.429,contract,0.5
+Parties,102,101,1.0,0.99,0.995,contract,0.5
+Post-Termination Services,29,58,0.466,0.931,0.621,contract,0.5
+Price Restrictions,0,0,0.0,0.0,0.0,contract,0.5
+Renewal Term,26,62,0.419,1.0,0.591,contract,0.5
+Revenue/Profit Sharing,35,40,0.725,0.829,0.773,contract,0.5
+Rofr/Rofo/Rofn,17,33,0.364,0.706,0.48,contract,0.5
+Source Code Escrow,1,0,0.0,0.0,0.0,contract,0.5
+Termination For Convenience,29,68,0.397,0.931,0.557,contract,0.5
+Third Party Beneficiary,6,1,0.0,0.0,0.0,contract,0.5
+Uncapped Liability,13,38,0.316,0.923,0.471,contract,0.5
+Unlimited/All-You-Can-Eat-License,3,0,0.0,0.0,0.0,contract,0.5
+Volume Restriction,17,34,0.412,0.824,0.549,contract,0.5
+Warranty Duration,10,16,0.562,0.9,0.692,contract,0.5
+Affiliate License-Licensee,20,16,0.375,0.3,0.333,chunk,tuned
+Affiliate License-Licensor,16,15,0.333,0.312,0.323,chunk,tuned
+Agreement Date,96,81,0.802,0.677,0.734,chunk,tuned
+Anti-Assignment,103,114,0.728,0.806,0.765,chunk,tuned
+Audit Rights,67,39,0.923,0.537,0.679,chunk,tuned
+Cap On Liability,82,62,0.742,0.561,0.639,chunk,tuned
+Change Of Control,43,6,0.167,0.023,0.041,chunk,tuned
+Competitive Restriction Exception,20,23,0.391,0.45,0.419,chunk,tuned
+Covenant Not To Sue,40,10,0.1,0.025,0.04,chunk,tuned
+Document Name,106,119,0.706,0.792,0.747,chunk,tuned
+Effective Date,87,97,0.433,0.483,0.457,chunk,tuned
+Exclusivity,60,101,0.366,0.617,0.46,chunk,tuned
+Expiration Date,88,90,0.811,0.83,0.82,chunk,tuned
+Governing Law,98,103,0.845,0.888,0.866,chunk,tuned
+Insurance,57,49,0.898,0.772,0.83,chunk,tuned
+Ip Ownership Assignment,47,51,0.333,0.362,0.347,chunk,tuned
+Irrevocable Or Perpetual License,21,30,0.5,0.714,0.588,chunk,tuned
+Joint Ip Ownership,10,96,0.052,0.5,0.094,chunk,tuned
+License Grant,105,72,0.931,0.638,0.757,chunk,tuned
+Liquidated Damages,19,10,0.8,0.421,0.552,chunk,tuned
+Minimum Commitment,72,71,0.423,0.417,0.42,chunk,tuned
+Most Favored Nation,3,3,0.0,0.0,0.0,chunk,tuned
+No-Solicit Of Customers,16,24,0.292,0.438,0.35,chunk,tuned
+No-Solicit Of Employees,14,23,0.435,0.714,0.541,chunk,tuned
+Non-Compete,45,116,0.31,0.8,0.447,chunk,tuned
+Non-Disparagement,9,13,0.077,0.111,0.091,chunk,tuned
+Non-Transferable License,33,60,0.4,0.727,0.516,chunk,tuned
+Notice Period To Terminate Renewal,17,26,0.462,0.706,0.558,chunk,tuned
+Parties,146,111,0.973,0.74,0.84,chunk,tuned
+Post-Termination Services,60,157,0.191,0.5,0.276,chunk,tuned
+Price Restrictions,0,0,0.0,0.0,0.0,chunk,tuned
+Renewal Term,27,17,0.941,0.593,0.727,chunk,tuned
+Revenue/Profit Sharing,62,43,0.674,0.468,0.552,chunk,tuned
+Rofr/Rofo/Rofn,37,104,0.183,0.514,0.27,chunk,tuned
+Source Code Escrow,2,0,0.0,0.0,0.0,chunk,tuned
+Termination For Convenience,37,67,0.313,0.568,0.404,chunk,tuned
+Third Party Beneficiary,10,838,0.004,0.3,0.007,chunk,tuned
+Uncapped Liability,14,30,0.367,0.786,0.5,chunk,tuned
+Unlimited/All-You-Can-Eat-License,3,0,0.0,0.0,0.0,chunk,tuned
+Volume Restriction,24,121,0.124,0.625,0.207,chunk,tuned
+Warranty Duration,12,11,0.636,0.583,0.609,chunk,tuned
+Affiliate License-Licensee,12,10,0.3,0.25,0.273,contract,tuned
+Affiliate License-Licensor,6,9,0.222,0.333,0.267,contract,tuned
+Agreement Date,93,99,0.909,0.968,0.938,contract,tuned
+Anti-Assignment,72,75,0.92,0.958,0.939,contract,tuned
+Audit Rights,38,40,0.8,0.842,0.821,contract,tuned
+Cap On Liability,44,52,0.808,0.955,0.875,contract,tuned
+Change Of Control,26,12,0.583,0.269,0.368,contract,tuned
+Competitive Restriction Exception,16,15,0.6,0.562,0.581,contract,tuned
+Covenant Not To Sue,24,28,0.571,0.667,0.615,contract,tuned
+Document Name,102,101,1.0,0.99,0.995,contract,tuned
+Effective Date,70,99,0.697,0.986,0.817,contract,tuned
+Exclusivity,33,45,0.578,0.788,0.667,contract,tuned
+Expiration Date,78,95,0.811,0.987,0.89,contract,tuned
+Governing Law,83,80,0.988,0.952,0.969,contract,tuned
+Insurance,32,27,1.0,0.844,0.915,contract,tuned
+Ip Ownership Assignment,23,25,0.64,0.696,0.667,contract,tuned
+Irrevocable Or Perpetual License,13,18,0.556,0.769,0.645,contract,tuned
+Joint Ip Ownership,7,27,0.185,0.714,0.294,contract,tuned
+License Grant,50,47,0.957,0.9,0.928,contract,tuned
+Liquidated Damages,14,7,1.0,0.5,0.667,contract,tuned
+Minimum Commitment,32,42,0.643,0.844,0.73,contract,tuned
+Most Favored Nation,3,3,0.0,0.0,0.0,contract,tuned
+No-Solicit Of Customers,7,16,0.25,0.571,0.348,contract,tuned
+No-Solicit Of Employees,10,17,0.529,0.9,0.667,contract,tuned
+Non-Compete,23,55,0.418,1.0,0.59,contract,tuned
+Non-Disparagement,7,18,0.167,0.429,0.24,contract,tuned
+Non-Transferable License,22,46,0.435,0.909,0.588,contract,tuned
+Notice Period To Terminate Renewal,16,25,0.52,0.812,0.634,contract,tuned
+Parties,102,101,1.0,0.99,0.995,contract,tuned
+Post-Termination Services,29,65,0.431,0.966,0.596,contract,tuned
+Price Restrictions,0,0,0.0,0.0,0.0,contract,tuned
+Renewal Term,26,38,0.605,0.885,0.719,contract,tuned
+Revenue/Profit Sharing,35,22,0.955,0.6,0.737,contract,tuned
+Rofr/Rofo/Rofn,17,41,0.341,0.824,0.483,contract,tuned
+Source Code Escrow,1,0,0.0,0.0,0.0,contract,tuned
+Termination For Convenience,29,48,0.438,0.724,0.545,contract,tuned
+Third Party Beneficiary,6,100,0.06,1.0,0.113,contract,tuned
+Uncapped Liability,13,17,0.529,0.692,0.6,contract,tuned
+Unlimited/All-You-Can-Eat-License,3,0,0.0,0.0,0.0,contract,tuned
+Volume Restriction,17,42,0.381,0.941,0.542,contract,tuned
+Warranty Duration,10,20,0.45,0.9,0.6,contract,tuned

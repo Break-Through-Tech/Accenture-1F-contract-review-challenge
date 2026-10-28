@@ -1,0 +1,83 @@
+category,val_positives,threshold,val_f1_at_0.5,val_f1_tuned,note,level
+Affiliate License-Licensee,6,0.1,0.0,0.364,,chunk
+Affiliate License-Licensor,6,0.5,0.0,0.0,,chunk
+Agreement Date,38,0.55,0.73,0.761,,chunk
+Anti-Assignment,45,0.2,0.467,0.647,,chunk
+Audit Rights,33,0.05,0.0,0.09,,chunk
+Cap On Liability,55,0.25,0.444,0.532,,chunk
+Change Of Control,13,0.05,0.0,0.11,,chunk
+Competitive Restriction Exception,5,0.5,0.0,0.0,,chunk
+Covenant Not To Sue,11,0.05,0.0,0.033,,chunk
+Document Name,43,0.3,0.8,0.837,,chunk
+Effective Date,33,0.4,0.542,0.688,,chunk
+Exclusivity,24,0.2,0.0,0.419,,chunk
+Expiration Date,40,0.45,0.71,0.776,,chunk
+Governing Law,40,0.3,0.298,0.779,,chunk
+Insurance,22,0.05,0.0,0.08,,chunk
+Ip Ownership Assignment,17,0.05,0.0,0.202,,chunk
+Irrevocable Or Perpetual License,16,0.1,0.0,0.629,,chunk
+Joint Ip Ownership,12,0.5,0.0,0.0,,chunk
+License Grant,51,0.4,0.796,0.808,,chunk
+Liquidated Damages,8,0.5,0.0,0.0,,chunk
+Minimum Commitment,14,0.1,0.0,0.111,,chunk
+Most Favored Nation,0,0.5,0.0,,"too few val positives, kept 0.5",chunk
+No-Solicit Of Customers,4,0.5,0.0,,"too few val positives, kept 0.5",chunk
+No-Solicit Of Employees,7,0.5,0.0,0.0,,chunk
+Non-Compete,21,0.05,0.0,0.06,,chunk
+Non-Disparagement,5,0.5,0.0,0.0,,chunk
+Non-Transferable License,23,0.15,0.0,0.635,,chunk
+Notice Period To Terminate Renewal,8,0.2,0.0,0.769,,chunk
+Parties,52,0.45,0.83,0.833,,chunk
+Post-Termination Services,24,0.15,0.0,0.295,,chunk
+Price Restrictions,1,0.5,0.0,,"too few val positives, kept 0.5",chunk
+Renewal Term,12,0.35,0.154,0.632,,chunk
+Revenue/Profit Sharing,23,0.05,0.0,0.048,,chunk
+Rofr/Rofo/Rofn,8,0.05,0.0,0.053,,chunk
+Source Code Escrow,4,0.5,0.0,,"too few val positives, kept 0.5",chunk
+Termination For Convenience,18,0.1,0.0,0.429,,chunk
+Third Party Beneficiary,5,0.5,0.0,0.0,,chunk
+Uncapped Liability,14,0.1,0.0,0.71,,chunk
+Unlimited/All-You-Can-Eat-License,4,0.5,0.0,,"too few val positives, kept 0.5",chunk
+Volume Restriction,8,0.05,0.0,0.044,,chunk
+Warranty Duration,12,0.5,0.0,0.0,,chunk
+Affiliate License-Licensee,5,0.1,0.0,0.6,,contract
+Affiliate License-Licensor,2,0.5,0.0,,"too few val positives, kept 0.5",contract
+Agreement Date,35,0.5,0.957,0.957,,contract
+Anti-Assignment,30,0.25,0.591,0.968,,contract
+Audit Rights,18,0.05,0.0,0.643,,contract
+Cap On Liability,25,0.1,0.718,0.857,,contract
+Change Of Control,10,0.05,0.0,0.455,,contract
+Competitive Restriction Exception,5,0.05,0.0,0.167,,contract
+Covenant Not To Sue,6,0.05,0.0,0.333,,contract
+Document Name,40,0.1,0.933,0.987,,contract
+Effective Date,30,0.25,0.622,0.879,,contract
+Exclusivity,16,0.05,0.0,0.64,,contract
+Expiration Date,34,0.15,0.786,0.957,,contract
+Governing Law,36,0.1,0.286,0.971,,contract
+Insurance,13,0.05,0.0,0.511,,contract
+Ip Ownership Assignment,10,0.1,0.0,0.667,,contract
+Irrevocable Or Perpetual License,10,0.1,0.0,0.857,,contract
+Joint Ip Ownership,5,0.05,0.0,0.375,,contract
+License Grant,21,0.35,0.95,0.976,,contract
+Liquidated Damages,5,0.5,0.0,0.0,,contract
+Minimum Commitment,11,0.05,0.0,0.468,,contract
+Most Favored Nation,0,0.5,0.0,,"too few val positives, kept 0.5",contract
+No-Solicit Of Customers,3,0.5,0.0,,"too few val positives, kept 0.5",contract
+No-Solicit Of Employees,6,0.05,0.0,0.222,,contract
+Non-Compete,12,0.05,0.0,0.512,,contract
+Non-Disparagement,4,0.5,0.0,,"too few val positives, kept 0.5",contract
+Non-Transferable License,16,0.15,0.0,0.857,,contract
+Notice Period To Terminate Renewal,6,0.15,0.0,0.857,,contract
+Parties,40,0.05,0.947,1.0,,contract
+Post-Termination Services,16,0.15,0.0,0.667,,contract
+Price Restrictions,1,0.5,0.0,,"too few val positives, kept 0.5",contract
+Renewal Term,10,0.3,0.182,0.667,,contract
+Revenue/Profit Sharing,12,0.05,0.0,0.533,,contract
+Rofr/Rofo/Rofn,6,0.05,0.0,0.316,,contract
+Source Code Escrow,2,0.5,0.0,,"too few val positives, kept 0.5",contract
+Termination For Convenience,13,0.1,0.0,0.545,,contract
+Third Party Beneficiary,5,0.5,0.0,0.0,,contract
+Uncapped Liability,11,0.1,0.0,0.8,,contract
+Unlimited/All-You-Can-Eat-License,1,0.5,0.0,,"too few val positives, kept 0.5",contract
+Volume Restriction,5,0.05,0.0,0.214,,contract
+Warranty Duration,9,0.05,0.0,0.343,,contract

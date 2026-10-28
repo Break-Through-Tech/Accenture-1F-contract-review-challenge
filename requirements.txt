@@ -1,1 +1,8 @@
-
+# Analysis, chunking and training (see training/requirements.txt for the Colab subset)
+numpy
+pandas
+scikit-learn
+matplotlib
+torch
+transformers>=4.40
+jupyter

@@ -132,6 +132,13 @@ The current dataset preparation script includes categories with at least **10 fu
 
 For an apples-to-apples comparison, transformer performance is also reported separately on the same 7 TF-IDF baseline categories.
 
+### Scope Decision
+
+- The classifier **detects all 41 CUAD categories**.
+- The **risk score uses the 19 rubric categories** in `evaluation/risk_categories.csv`.
+- The identification categories (Document Name, Parties, Agreement/Effective/Expiration Date, Governing Law) feed the clause register as **contract metadata**.
+- The remaining categories are reported but carry **no risk weight** until the advisor assigns them a level.
+
 ---
 
 ## Exploratory Data Analysis
@@ -294,12 +301,25 @@ CUAD contains significant imbalance both:
 
 The transformer training pipeline supports positive-class weighting using the ratio of negative to positive examples for each category.
 
-Additional strategies being evaluated include:
+Adopted approach (see [`training/results/distilroberta_baseline/RESULTS.md`](training/results/distilroberta_baseline/RESULTS.md)):
 
-- weighted loss
-- positive-class weighting
-- threshold tuning
-- category-specific error analysis
+- **Positive-class weighting of √(neg/pos), capped at 30** (`--pos-weight-mode sqrt`). Without weighting, rare categories collapse to "never present"; raw neg/pos weights (~600) are too extreme.
+- **Per-category thresholds tuned on validation**, separately for chunk and contract level (`training/evaluate.py`).
+- **Checkpoint selection by validation macro F1**, so frequent, easy categories don't dominate.
+
+---
+
+## Results
+
+DistilRoBERTa (3 epochs, sqrt weighting, tuned thresholds), contract level on the official test set:
+
+| | Macro F1 |
+|---|---:|
+| 7 TF-IDF baseline categories | **0.706** (TF-IDF: 0.592) |
+| 19 risk-rubric categories | 0.694 |
+| All 40 evaluable categories | 0.596 |
+
+It beats TF-IDF on 5 of 7 categories, with the largest gains on Insurance, Renewal Term and Notice Period To Terminate Renewal. It trails on Change Of Control, the main weakness to address. Full per-category metrics, threshold tables and error analysis: [`training/results/distilroberta_baseline/`](training/results/distilroberta_baseline/).
 
 ---
 
@@ -447,18 +467,18 @@ For GPU training, use the provided Google Colab notebook and select a **T4 GPU**
 - paragraph-aware tokenization pipeline
 - DistilRoBERTa training pipeline implementation
 - final tokenized dataset generated and validated (chunker token-count fix, ~99% span coverage)
+- initial DistilRoBERTa baseline trained (unweighted and sqrt-weighted)
+- class-imbalance handling (capped sqrt weighting + tuned thresholds)
+- per-category evaluation vs TF-IDF and first error analysis
 
 ### In Progress
 
-- running the initial DistilRoBERTa training baseline
-- testing class-imbalance handling approaches
-- comparing transformer performance against TF-IDF
+- improving Change Of Control, Covenant Not To Sue and Termination For Convenience detection
+- more robust threshold selection (cross-validation instead of 40 validation contracts)
 
 ### Next Steps
 
-- compute and review per-category transformer metrics
-- compare weighted vs. unweighted training
-- conduct false-positive / false-negative error analysis
+- review error-analysis rows with the advisor
 - refine risk rules using observed model failure cases
 - build the contract-level risk-scoring layer
 - validate risk rankings with advisor-reviewed examples

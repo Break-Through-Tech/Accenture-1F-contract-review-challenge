@@ -1,0 +1,8 @@
+category,baseline (0.5),baseline (tuned),sqrt_weighted (0.5),sqrt_weighted (tuned),tfidf_baseline
+Anti-Assignment,0.515,0.899,0.939,0.939,0.865
+Audit Rights,0.0,0.594,0.79,0.821,0.706
+Change Of Control,0.0,0.5,0.508,0.368,0.545
+Insurance,0.0,0.536,0.87,0.915,0.618
+Notice Period To Terminate Renewal,0.0,0.52,0.429,0.634,0.424
+Renewal Term,0.074,0.737,0.591,0.719,0.407
+Termination For Convenience,0.0,0.543,0.557,0.545,0.576
