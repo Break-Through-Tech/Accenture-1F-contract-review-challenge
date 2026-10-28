@@ -380,61 +380,6 @@ def paragraph_token_chunks(
                 )
             )
 
-    packed = []
-
-    cur = []
-    cur_n = 0
-
-    for s, e in units:
-
-        n = token_count(
-            tokenizer,
-            text,
-            s,
-            e,
-        )
-
-        if (
-            not cur
-            or cur_n + n <= max_tokens
-        ):
-
-            cur.append(
-                (
-                    s,
-                    e,
-                )
-            )
-
-            cur_n += n
-
-        else:
-
-            packed.append(
-                (
-                    cur[0][0],
-                    cur[-1][1],
-                )
-            )
-
-            cur = [
-                (
-                    s,
-                    e,
-                )
-            ]
-
-            cur_n = n
-
-    if cur:
-
-        packed.append(
-            (
-                cur[0][0],
-                cur[-1][1],
-            )
-        )
-
     starts = np.array(
         [
             s
@@ -449,33 +394,84 @@ def paragraph_token_chunks(
         ]
     )
 
-    out = []
-
-    for cid, (s, e) in enumerate(packed):
-
-        ts = int(
+    # Measure units in the full-document token stream rather than by
+    # re-tokenizing each unit on its own. Isolated counts miss tokens
+    # between units (e.g. RoBERTa/GPT-style BPE emits newline tokens) and
+    # context-dependent merges, which let packed chunks exceed max_tokens
+    # and get their heads clipped below, silently dropping text.
+    bounds = [
+        int(
             np.searchsorted(
                 ends,
                 s,
                 side="right",
             )
         )
+        for s, _ in units
+    ]
 
-        te = int(
-            np.searchsorted(
-                starts,
-                e,
-                side="left",
+    bounds[0] = 0
+    bounds.append(len(ids))
+
+    spans = []
+
+    for a, b in zip(
+        bounds[:-1],
+        bounds[1:],
+    ):
+
+        # A unit can still exceed max_tokens in document space.
+        while b - a > max_tokens:
+
+            spans.append(
+                (
+                    a,
+                    a + max_tokens,
+                )
             )
-        )
 
-        te = max(
-            ts + 1,
-            min(
-                te,
-                len(offs),
-            ),
+            a += max_tokens
+
+        if b > a:
+
+            spans.append(
+                (
+                    a,
+                    b,
+                )
+            )
+
+    packed = []
+
+    cur_s, cur_e = spans[0]
+
+    for a, b in spans[1:]:
+
+        if b - cur_s <= max_tokens:
+
+            cur_e = b
+
+        else:
+
+            packed.append(
+                (
+                    cur_s,
+                    cur_e,
+                )
+            )
+
+            cur_s, cur_e = a, b
+
+    packed.append(
+        (
+            cur_s,
+            cur_e,
         )
+    )
+
+    out = []
+
+    for cid, (ts, te) in enumerate(packed):
 
         if cid > 0:
             ts = max(
@@ -483,8 +479,7 @@ def paragraph_token_chunks(
                 ts - overlap,
             )
 
-        # Make sure overlap never causes the raw chunk
-        # to exceed max_tokens.
+        # Packed spans are <= max_tokens, so this only trims overlap.
         if te - ts > max_tokens:
             ts = te - max_tokens
 

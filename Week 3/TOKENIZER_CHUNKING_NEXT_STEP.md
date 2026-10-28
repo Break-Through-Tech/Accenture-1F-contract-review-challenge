@@ -63,3 +63,17 @@ Use:
 as the current tokenizer-based chunking baseline.
 
 This result currently uses `bert-base-uncased` as a provisional tokenizer. Once the team selects the final transformer model, rerun the experiment using that model's actual tokenizer before final model training.
+
+## Update: Final Tokenizer and Chunker Fix
+
+The team selected `distilroberta-base`, and `training/prepare_dataset.py` now runs this chunker with that tokenizer to build the training data.
+
+Running under RoBERTa's tokenizer exposed a token-counting bug in `paragraph_token_chunks` that silently dropped contract text. It is now fixed. With DistilRoBERTa, 480 + 64 gives:
+
+| Metric | Train | Test |
+|---|---:|---:|
+| Annotated span coverage | 98.62% | 99.21% |
+| Chunks | 14,015 | 2,906 |
+| Contract text never chunked | 0 | 0 |
+
+The BERT results above are unchanged. Full details: [`CHUNKER_TOKEN_COUNT_FIX.md`](CHUNKER_TOKEN_COUNT_FIX.md).

@@ -16,6 +16,10 @@ Outputs in --out (default training/data, gitignored):
   train_tokenized.pt / test_tokenized.pt  input_ids, labels, label_mask, contract titles
   labels.json                           ordered category list = model output heads
   dataset_summary.csv                   chunk counts and positives per category
+  chunking_summary.csv                  per split: chunks, annotated-span coverage
+
+Sanity checks (the script fails if violated): every contract is fully covered
+by its chunks with no gaps, so no contract text is silently dropped.
 """
 
 import argparse
@@ -43,6 +47,24 @@ def load_chunker():
 
 def split_labels(value):
     return [x for x in str(value).split(" | ") if x and x != "nan"]
+
+
+def check_chunks(chunks_df, dataset, chunker):
+    """Assert chunks tile every contract and return annotated-span coverage."""
+    for title, g in chunks_df.groupby("contract_title", sort=False):
+        g = g.sort_values("chunk_id")
+        starts, ends = g["token_start"].to_numpy(), g["token_end"].to_numpy()
+        if starts[0] != 0 or (starts[1:] > ends[:-1]).any():
+            raise AssertionError(f"chunks leave a gap in contract: {title}")
+
+    covered = total = 0
+    by_title = {t: g for t, g in chunks_df.groupby("contract_title")}
+    for contract in chunker.load_contracts(dataset, ""):
+        g = by_title[contract["title"]]
+        for a in contract["answers"]:
+            total += 1
+            covered += bool(((g["start_char"] <= a["start"]) & (g["end_char"] >= a["end"])).any())
+    return covered, total
 
 
 def encode_split(chunks_df, tokenizer, categories, max_length):
@@ -96,13 +118,28 @@ def main():
     chunk_fn = chunker.make_fn(tokenizer, CHUNK_KIND, CHUNK_MAX_TOKENS, CHUNK_OVERLAP)
 
     splits = {}
+    chunking_rows = []
     for split, path in [("train", args.train), ("test", args.test)]:
         print(f"Chunking {split} with {args.tokenizer} ({CHUNK_KIND} {CHUNK_MAX_TOKENS}/{CHUNK_OVERLAP})...")
         dataset = json.loads(Path(path).read_text(encoding="utf-8"))
         df = chunker.build_dataset(dataset, split, chunk_fn)
+        covered, total = check_chunks(df, dataset, chunker)
+        chunking_rows.append(
+            {
+                "split": split,
+                "contracts": df["contract_title"].nunique(),
+                "chunks": len(df),
+                "covered_spans": covered,
+                "total_spans": total,
+                "span_coverage": round(covered / total, 4),
+            }
+        )
         df.to_csv(out / f"{split}_chunks.csv", index=False)
         splits[split] = df
-        print(f"  {df['contract_title'].nunique()} contracts -> {len(df)} chunks")
+        print(f"  {df['contract_title'].nunique()} contracts -> {len(df)} chunks, "
+              f"annotated span coverage {covered / total:.2%} ({covered}/{total})")
+
+    pd.DataFrame(chunking_rows).to_csv(out / "chunking_summary.csv", index=False)
 
     # Output heads: every CUAD category with enough fully-contained train positives.
     train_counts = pd.Series(

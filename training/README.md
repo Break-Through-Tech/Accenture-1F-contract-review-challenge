@@ -9,7 +9,16 @@ Milestone #2 (October), Task #2: finalize chunking, prepare the tokenized datase
    - partial-only overlap → masked (ignored, not treated as a negative)
    - otherwise → negative
 
-   It saves `train/test_chunks.csv`, `train/test_tokenized.pt`, `labels.json` and `dataset_summary.csv` to `training/data/`.
+   It saves `train/test_chunks.csv`, `train/test_tokenized.pt`, `labels.json`, `dataset_summary.csv` and `chunking_summary.csv` to `training/data/`.
+
+   Safeguards: the script stops if any contract's chunks leave a gap (contract text dropped), and it reports annotated-span coverage per split. Expected output:
+
+   | Split | Contracts | Chunks | Span coverage |
+   |---|---:|---:|---:|
+   | train | 408 | 14,015 | 98.62% |
+   | test | 102 | 2,906 | 99.21% |
+
+   If you generated `training/data/` before the chunker token-count fix (October 27), regenerate it and retrain. The old data dropped about 1% of contract text and about 4–5% of annotated clauses. See [`Week 3/CHUNKER_TOKEN_COUNT_FIX.md`](../Week%203/CHUNKER_TOKEN_COUNT_FIX.md).
 2. **`train_distilroberta.py`**: fine-tunes `distilroberta-base` with one sigmoid head per category and a masked BCE loss.
    - 10% of the official train contracts are held out (split by contract) for model selection.
    - The model is evaluated on the official CUAD test contracts.
