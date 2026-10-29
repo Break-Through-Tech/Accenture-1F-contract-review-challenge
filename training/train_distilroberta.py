@@ -9,7 +9,11 @@ Baseline training loop (meant for a Google Colab GPU, also runs on CPU for smoke
   - test: the official CUAD test contracts (test.json), never used for model selection
 
 Writes to --out (default training/outputs, gitignored):
-  best_model/                     model + tokenizer from the best validation epoch
+  best_model/                     model + tokenizer from the best validation epoch (macro F1)
+  predictions_val.npz / predictions_test.npz
+                                  probabilities, labels, masks, chunk indices and contract
+                                  titles, consumed by training/evaluate.py (thresholds,
+                                  baseline comparison, error analysis)
   history.csv                     per-epoch train loss and validation micro/macro F1
   chunk_level_metrics.csv         per-category P/R/F1 on test chunks
   contract_level_metrics.csv      per-category P/R/F1 on test contracts (max over chunks),
@@ -166,9 +170,21 @@ def main():
     ap.add_argument("--val-frac", type=float, default=0.1)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument(
+        "--pos-weight-mode",
+        choices=["none", "raw", "sqrt"],
+        default="none",
+        help="Per-category positive weighting: raw = neg/pos, sqrt = sqrt(neg/pos) (Task #3).",
+    )
+    ap.add_argument(
+        "--pos-weight-cap",
+        type=float,
+        default=30.0,
+        help="Upper bound on any category's positive weight; raw neg/pos reaches ~600.",
+    )
+    ap.add_argument(
         "--use-pos-weight",
         action="store_true",
-        help="Weight positives by neg/pos ratio per category (starting point for Task #3).",
+        help="Deprecated alias for --pos-weight-mode raw.",
     )
     ap.add_argument(
         "--limit",
@@ -201,7 +217,12 @@ def main():
     tr_idx = [i for i, t in enumerate(train_titles) if t not in val_titles]
     print(f"Train chunks: {len(tr_idx)} | val chunks: {len(val_idx)} ({len(val_titles)} contracts) | test chunks: {n_test}")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     use_amp = device.type == "cuda"
     print(f"Device: {device} | categories: {len(categories)}")
 
@@ -219,13 +240,20 @@ def main():
     val_loader = DataLoader(ChunkDataset(train_data, val_idx), batch_size=args.batch_size * 2, collate_fn=collate)
     test_loader = DataLoader(ChunkDataset(test_data, range(n_test)), batch_size=args.batch_size * 2, collate_fn=collate)
 
-    pos_weight = None
     if args.use_pos_weight:
+        args.pos_weight_mode = "raw"
+    pos_weight = None
+    if args.pos_weight_mode != "none":
         labels_tr = train_data["labels"][tr_idx]
         mask_tr = train_data["label_mask"][tr_idx]
         pos = (labels_tr * mask_tr).sum(0)
         neg = ((1 - labels_tr) * mask_tr).sum(0)
-        pos_weight = (neg / pos.clamp(min=1.0)).to(device)
+        ratio = neg / pos.clamp(min=1.0)
+        if args.pos_weight_mode == "sqrt":
+            ratio = ratio.sqrt()
+        pos_weight = ratio.clamp(min=1.0, max=args.pos_weight_cap).to(device)
+        print(f"pos_weight ({args.pos_weight_mode}, cap {args.pos_weight_cap}): "
+              f"min {pos_weight.min():.1f}, median {pos_weight.median():.1f}, max {pos_weight.max():.1f}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     total_steps = len(train_loader) * args.epochs
@@ -270,8 +298,10 @@ def main():
         )
         print(f"Epoch {epoch}: {history[-1]}")
 
-        if val_micro > best_f1:
-            best_f1 = val_micro
+        # Select on macro F1 so frequent, easy categories (Document Name,
+        # Parties, ...) don't dominate checkpoint choice.
+        if val_macro > best_f1:
+            best_f1 = val_macro
             model.save_pretrained(out / "best_model")
             tokenizer.save_pretrained(out / "best_model")
 
@@ -280,6 +310,18 @@ def main():
     # Final test evaluation with the best validation checkpoint.
     model = AutoModelForSequenceClassification.from_pretrained(out / "best_model").to(device)
     test_probs, test_labels, test_masks = predict(model, test_loader, device, use_amp)
+    val_probs, val_labels, val_masks = predict(model, val_loader, device, use_amp)
+    for name, probs, labels, masks, idx, data in [
+        ("val", val_probs, val_labels, val_masks, val_idx, train_data),
+        ("test", test_probs, test_labels, test_masks, list(range(n_test)), test_data),
+    ]:
+        np.savez_compressed(
+            out / f"predictions_{name}.npz",
+            probs=probs, labels=labels, masks=masks,
+            chunk_index=np.array(idx),
+            contract_title=np.array([data["contract_title"][i] for i in idx]),
+            categories=np.array(categories),
+        )
 
     chunk_df = per_category_metrics(test_probs, test_labels, test_masks, categories, args.threshold)
     chunk_df.to_csv(out / "chunk_level_metrics.csv", index=False)

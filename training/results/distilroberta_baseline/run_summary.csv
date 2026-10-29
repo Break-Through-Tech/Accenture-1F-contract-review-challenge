@@ -1,0 +1,10 @@
+run,threshold_scheme,level,micro_f1,macro_f1_all,macro_f1_risk19,macro_f1_tfidf7
+baseline,0.5,chunk,0.392,0.132,0.085,0.066
+baseline,0.5,contract,0.529,0.164,0.111,0.084
+baseline,tuned,chunk,0.326,0.259,0.282,0.328
+baseline,tuned,contract,0.669,0.461,0.55,0.618
+sqrt_weighted,0.5,chunk,0.527,0.417,0.478,0.507
+sqrt_weighted,0.5,contract,0.755,0.589,0.685,0.669
+sqrt_weighted,tuned,chunk,0.458,0.445,0.53,0.572
+sqrt_weighted,tuned,contract,0.752,0.596,0.694,0.706
+tfidf_baseline,-,contract,,,,0.592
