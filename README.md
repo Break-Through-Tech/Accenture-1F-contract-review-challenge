@@ -403,6 +403,11 @@ Actual clause-level risk may vary based on:
 │   ├── requirements.txt
 │   └── README.md
 │
+├── risk/
+│   ├── score_contracts.py
+│   ├── risk_rules.json
+│   └── README.md
+│
 ├── Challenge-Project-Overview.md
 └── README.md
 ```
@@ -450,6 +455,15 @@ python training/train_distilroberta.py --epochs 1 --limit 64
 
 For GPU training, use the provided Google Colab notebook and select a **T4 GPU** runtime.
 
+### Score Contract Risk
+
+```bash
+python risk/score_contracts.py --source gold
+python risk/score_contracts.py --source model --run training/outputs/sqrt_weighted
+```
+
+See [`risk/README.md`](risk/README.md) for the scoring rules and first results.
+
 ---
 
 ## Current Status
@@ -470,17 +484,18 @@ For GPU training, use the provided Google Colab notebook and select a **T4 GPU**
 - initial DistilRoBERTa baseline trained (unweighted and sqrt-weighted)
 - class-imbalance handling (capped sqrt weighting + tuned thresholds)
 - per-category evaluation vs TF-IDF and first error analysis
+- first rule-based risk-scoring layer (`risk/`): clause register, contract triage buckets, sensitivity analysis, and keyword rules from the error analysis (Change Of Control backstop, Termination For Convenience check)
 
 ### In Progress
 
 - improving Change Of Control, Covenant Not To Sue and Termination For Convenience detection
 - more robust threshold selection (cross-validation instead of 40 validation contracts)
+- calibrating risk-score cutoffs for model confidences (the model currently under-ranks Medium contracts)
 
 ### Next Steps
 
 - review error-analysis rows with the advisor
-- refine risk rules using observed model failure cases
-- build the contract-level risk-scoring layer
+- confirm the "four signals" and the risk weights with the advisor
 - validate risk rankings with advisor-reviewed examples
 - integrate classification and risk scoring into an end-to-end pipeline
 

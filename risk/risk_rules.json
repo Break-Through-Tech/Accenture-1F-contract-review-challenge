@@ -1,0 +1,75 @@
+{
+	"_about": "Scoring rules for risk/score_contracts.py. Category risk levels come from evaluation/risk_categories.csv; this file holds everything else, so weights can be changed without touching code. Category names are matched ignoring case and spaces.",
+
+	"level_weights": {
+		"High": 3,
+		"Medium": 1,
+		"Low": 0.5
+	},
+
+	"severity_floor": {
+		"_about": "Signal 2: a High-risk clause detected with at least this confidence puts the contract in at least this bucket, whatever its total score.",
+		"min_confidence": 0.8,
+		"floor_bucket": "Medium"
+	},
+
+	"missing_protections": [
+		{
+			"_about": "Signal 3: points added when a protective clause is absent (and, if 'present' is given, only when that clause is detected).",
+			"name": "No cap on liability",
+			"missing": "Cap On Liability",
+			"points": 2
+		},
+		{
+			"name": "Uncapped liability with no cap",
+			"present": "Uncapped Liability",
+			"missing": "Cap On Liability",
+			"points": 2
+		}
+	],
+
+	"combinations": [
+		{
+			"_about": "Signal 4: points added when all listed clauses are detected, scaled by the lowest confidence among them.",
+			"name": "Exclusive and committed to minimum purchases",
+			"all_of": ["Exclusivity", "Minimum Commitment"],
+			"points": 1
+		},
+		{
+			"name": "Renews unless notice is given by a deadline",
+			"all_of": ["Renewal Term", "Notice Period To Terminate Renewal"],
+			"points": 1
+		},
+		{
+			"name": "Non-compete on top of exclusivity",
+			"all_of": ["Non-Compete", "Exclusivity"],
+			"points": 1
+		}
+	],
+
+	"buckets": {
+		"_about": "Cutoffs are percentiles of the scores of the 408 training contracts (CUAD annotations), then applied to the scored contracts.",
+		"high_top_pct": 20,
+		"medium_next_pct": 30
+	},
+
+	"keyword_rules": {
+		"_about": "Model mode only; fixes from the error analysis in training/results/distilroberta_baseline/RESULTS.md.",
+		"backstop": [
+			{
+				"_about": "Flag the category at this confidence if the model misses it but any chunk matches the pattern.",
+				"category": "Change Of Control",
+				"pattern": "change (of|in) control|controlling interest|change of ownership",
+				"confidence": 0.5
+			}
+		],
+		"require": [
+			{
+				"_about": "Scale confidence down if the evidence chunk lacks the pattern.",
+				"category": "Termination For Convenience",
+				"pattern": "convenience|without cause|for any reason|at any time",
+				"multiplier_if_missing": 0.5
+			}
+		]
+	}
+}
