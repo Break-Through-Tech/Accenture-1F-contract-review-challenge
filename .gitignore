@@ -2,5 +2,6 @@
 .DS_Store
 training/data/
 training/outputs/
+risk/outputs/
 training/*.log
 __pycache__/
