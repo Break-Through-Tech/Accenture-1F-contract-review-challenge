@@ -62,6 +62,16 @@ When evaluating an individual clause:
 - **Termination consequences:** Could the clause result in significant costs or loss of rights?
 - **Party perspective:** Which party bears the obligation or receives the benefit?
 
+### Category Boundaries
+
+- **Anti-Assignment vs. Change Of Control:** Anti-Assignment concerns transferring the agreement, rights, or obligations. An affiliate, successor, merger, or asset-sale exception may narrow that restriction. Change Of Control concerns a change in ownership or control that itself triggers a consequence, such as consent, termination, repayment, service limits, or loss of rights. An asset-acquisition exception alone is not evidence of such a trigger.
+- **Termination For Convenience vs. other termination:** Termination For Convenience means a party may terminate without breach or another specified triggering event, including termination at will, for any reason, or in a party's discretion. Breach, death/incapacity, expiration, and other event-based termination rights are not by themselves termination for convenience. Record which party has the right and any notice or payment consequences.
+- **Notice Period To Terminate Renewal vs. generic notice:** This category requires a notice deadline tied to preventing or ending a renewal. A general notice provision or a renewal term without an opt-out deadline is not sufficient.
+- **Post-Termination Services vs. surviving duties:** This category concerns continued services, support, supply, transition, or performance after termination or expiration. Survival of confidentiality, indemnity, payment, or other provisions alone is not post-termination services.
+- **Uncapped Liability vs. a liability cap:** Uncapped Liability requires an express unlimited, uncapped, or no-limit exposure, including an applicable exception to a cap. A broad indemnity or liability clause without clear uncapped wording is not enough. Review the scope and exceptions to any stated cap.
+- **IP Ownership Assignment vs. Anti-Assignment:** IP Ownership Assignment transfers ownership of intellectual property; Anti-Assignment restricts transfer of the agreement or its rights/obligations. A license grant or a statement that IP may be assigned does not by itself establish an ownership transfer.
+- **Non-Transferable License vs. Anti-Assignment:** Non-Transferable License limits transfer, sublicensing, or assignment of licensed rights. It is distinct from a general restriction on assigning the agreement.
+
 ## 4. Intended Use
 
 This rubric is designed to support:

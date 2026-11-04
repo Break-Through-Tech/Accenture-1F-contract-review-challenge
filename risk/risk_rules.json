@@ -53,23 +53,38 @@
 		"medium_next_pct": 30
 	},
 
-	"keyword_rules": {
-		"_about": "Model mode only; fixes from the error analysis in training/results/distilroberta_baseline/RESULTS.md.",
-		"backstop": [
-			{
-				"_about": "Flag the category at this confidence if the model misses it but any chunk matches the pattern.",
-				"category": "Change Of Control",
-				"pattern": "change (of|in) control|controlling interest|change of ownership",
-				"confidence": 0.5
-			}
-		],
-		"require": [
-			{
-				"_about": "Scale confidence down if the evidence chunk lacks the pattern.",
-				"category": "Termination For Convenience",
-				"pattern": "convenience|without cause|for any reason|at any time",
-				"multiplier_if_missing": 0.5
-			}
-		]
-	}
+	"evidence_rules": [
+		{
+			"_about": "Model mode only. A matching clause-specific pattern qualifies any model detection; it can also backstop a missed detection at the listed confidence. Patterns are checked across each contract's chunks, and the matching chunk is retained as evidence.",
+			"category": "Change Of Control",
+			"name": "Control or ownership event with contractual consequence",
+			"pattern": "(?is)(?=.*(?:change\\s+of\\s+control|change\\s+in\\s+control|controlling\\s+interest|change\\s+of\\s+ownership|merger|acquir\\w*[\\s\\S]{0,100}(?:control|ownership|equity|stock|shares|company|business|financial\\s+institution)|(?:control|ownership|equity|stock|shares|company|business)[\\s\\S]{0,100}acquir\\w*))(?=.*(?:terminate|consent|repa(?:y|id|ment)|accelerat|forfeit|restrict|continue\\s+to\\s+provide|notice\\s+of))",
+			"multiplier_if_missing": 0.25,
+			"backstop_confidence": 0.5
+		},
+		{
+			"category": "Termination For Convenience",
+			"name": "Termination without cause or at a party's discretion",
+			"pattern": "(?is)(?=.*\\bterminat\\w*\\b)(?=.*(?:without\\s+(?:cause|reason)|for\\s+any\\s+reason|at\\s+any\\s+time|sole\\s+discretion|for\\s+convenience))",
+			"multiplier_if_missing": 0.25
+		},
+		{
+			"category": "Notice Period To Terminate Renewal",
+			"name": "Notice deadline linked to ending or declining renewal",
+			"pattern": "(?is)(?=.*(?:renewal|renew|extension))(?=.*(?:notice|days\\s+prior|days'\\s+notice))(?=.*(?:terminat|non.?renew|not\\s+renew|declin\\w*\\s+(?:the\\s+)?renewal|opt\\s+out))",
+			"multiplier_if_missing": 0.25
+		},
+		{
+			"category": "Post-Termination Services",
+			"name": "Service or support obligation continuing after termination",
+			"pattern": "(?is)(?=.*(?:after|following|upon|post)[\\s\\S]{0,120}(?:termination|expiration)|(?:termination|expiration)[\\s\\S]{0,120}(?:after|following|upon|post))(?=.*(?:service|support|provide|deliver|continue|transition|wind.?down))",
+			"multiplier_if_missing": 0.25
+		},
+		{
+			"category": "Uncapped Liability",
+			"name": "Express uncapped or unlimited liability language",
+			"pattern": "(?is)(?=.*(?:uncapped|unlimited|without\\s+limitation|no\\s+(?:financial\\s+)?cap|no\\s+limit|not\\s+subject\\s+to\\s+(?:any\\s+)?(?:limitation|cap)))(?=.*(?:liabilit\\w*|damages|indemnif\\w*))",
+			"multiplier_if_missing": 0.25
+		}
+	]
 }
