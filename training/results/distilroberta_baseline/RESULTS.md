@@ -137,8 +137,7 @@ Contract-level tuned F1 is reported below. Pattern descriptions refer to sampled
 
 ## Recommended Next Steps
 
-1. Adopt `sqrt_weighted` + tuned contract thresholds as the baseline for the risk layer.
-2. Try more epochs: validation macro F1 was still rising at epoch 3 (0.26 → 0.40 → 0.41).
-3. Use 5-fold contract-level cross-validation on train to choose thresholds more robustly than 40 validation contracts allow.
-4. For Change Of Control, Covenant Not To Sue and Termination For Convenience, review the error rows with the advisor. Consider keyword features or a rule-based backstop for the risk layer.
-5. Try a larger or legal-domain encoder (e.g. `roberta-base`, `nlpaueb/legal-bert-base-uncased`) on Colab now that the pipeline is validated.
+1. When model prediction outputs and chunk data are available, rerun model-level risk scoring with the current evidence rules (for example, `python risk/score_contracts.py --source model --run training/outputs/sqrt_weighted`).
+2. Compare the revised rankings and risk buckets with the previous baseline, including rank correlation, bucket agreement and migrations, and the Change Of Control evidence-backstop precision/recall.
+3. As separate future model work, consider contract-level cross-validation for threshold selection and experiments with more epochs or a legal-domain encoder.
+4. Advisor or domain-expert review of the revised examples and risk rankings is optional future validation; it is not a prerequisite for completing this error-analysis and rule-refinement task.
