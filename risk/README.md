@@ -15,10 +15,9 @@ Category risk levels come from the rubric, [`evaluation/risk_categories.csv`](..
 
 **Buckets.** High = top 20% of scores, Medium = next 30%, Low = the rest. The cutoffs are percentiles of the scores of the 408 **training** contracts, computed from CUAD annotations. So they're fixed by the rules, not by the model or the test set.
 
-**Keyword rules (model source only).** These come from the error analysis in [`RESULTS.md`](../training/results/distilroberta_baseline/RESULTS.md):
+**Evidence rules (model source only).** The clause error analysis in [`RESULTS.md`](../training/results/distilroberta_baseline/RESULTS.md) motivated category-specific evidence checks for Change Of Control, Termination For Convenience, Notice Period To Terminate Renewal, Post-Termination Services, and Uncapped Liability. A rule searches every chunk in the contract, not just the classifier's highest-scoring chunk. A match retains the model confidence and records the matching chunk; an unmatched model detection is downweighted to 25% confidence. Change Of Control additionally has a 0.5-confidence backstop, but only when the same chunk contains both a control/acquisition signal and a contractual consequence.
 
-- **Change Of Control backstop.** If the model misses it but a chunk says "change of control", "change in control", "controlling interest" or "change of ownership", the clause is flagged at confidence 0.5.
-- **Termination For Convenience check.** If the evidence chunk lacks "convenience", "without cause", "for any reason" or "at any time", the confidence is halved.
+Each clause-register row records `source`, `rule_reason`, and `evidence`, so a reviewer can see whether the model was supported, downweighted, or backstopped. These are conservative model-side evidence checks, not legal determinations. They do not alter CUAD annotation/gold scoring, category tiers, weights, severity floor, bucket cutoffs, missing-protection rules, or combinations. Anti-Assignment remains unchanged; its contract-level F1 is 0.939 and sampled apparent errors include genuine restrictions and possible annotation gaps.
 
 ## Run
 
@@ -37,12 +36,14 @@ Outputs go to `risk/outputs/<source>/` (gitignored):
 | File | Contents |
 |---|---|
 | `contract_scores.csv` | Rank, bucket, score, High/Medium clause counts and every reason with its points |
-| `clause_register.csv` | One row per detected clause: category, risk level, confidence, points, source (annotation / model / keyword) and evidence text |
+| `clause_register.csv` | One row per detected clause: category, risk level, confidence, points, source, named `rule_reason`, and evidence text |
 | `sensitivity.csv` | How many contracts change bucket, and rank correlation with the default, when cutoffs move ±5 points or level weights change |
 | `model_vs_gold.csv` | (model) Rank correlation and bucket agreement with the gold ranking under the same rules |
-| `keyword_rules_check.csv` | (model) Precision/recall of each keyword rule against annotations |
+| `evidence_rules_check.csv` | (model) Contract-level precision/recall of the Change Of Control evidence backstop against annotations |
 
-## First results (test set, 102 contracts, `sqrt_weighted` run)
+## Previous Baseline Results
+
+These are the initial test-set results before the evidence-rule refinements above. They are retained as a historical baseline; rerun model scoring to evaluate the revised rules.
 
 | | Gold | Model |
 |---|---:|---:|
@@ -52,8 +53,6 @@ Outputs go to `risk/outputs/<source>/` (gitignored):
 | Gold-High contracts also High | — | 14 / 18 (1 flagged Low) |
 
 - **Rankings are stable.** Moving a cutoff by 5 points or changing a level weight moves at most 10% of contracts between buckets, and rank correlation with the default stays ≥ 0.98.
-- **The Change Of Control backstop works.** Contract-level recall rises from 0.27 to 0.77 and precision from 0.44 to 0.63.
-- **The Termination For Convenience check works.** Detections with the keyword are right 62% of the time; those without it, 27%.
 - **The model under-ranks Medium contracts.** 20 of 46 gold-Medium contracts land in Low. Model confidences sit around 0.7–0.9 instead of 1, so scores shrink against cutoffs set on annotations, and the 0.8 severity floor rarely fires (26 contracts vs 63 in gold).
 
 ## Limitations and open questions
@@ -62,5 +61,5 @@ Outputs go to `risk/outputs/<source>/` (gitignored):
 - **The weights are a first guess.** Calibrating them needs the advisor's hand-ranked contracts. Then compare with Spearman correlation and bucket agreement, as `model_vs_gold.csv` does against annotations.
 - **Party perspective is ignored.** A Non-Compete is a risk for the restricted party and a benefit to the other. The score assumes you're reviewing for the party taking on the obligations.
 - **The severity floor is broad.** 62% of test contracts contain at least one High-risk clause (Exclusivity alone: 33 of 102), so in gold mode the floor decides most Medium buckets.
-- **Rubric and notebook disagree.** `notebooks/naeem_tfidf_baseline_risk_rules.ipynb` rates Termination For Convenience High and Insurance and Audit Rights Low; the rubric, used here, rates all three Medium.
+- The notebook's initial category tiers are aligned to the current rubric; `evaluation/risk_categories.csv` remains the source of truth.
 - **A clause's presence isn't its severity.** A cap of $10M and a cap of $100 both count as "Cap On Liability". Reading amounts, durations and scope is a possible next step.

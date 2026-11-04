@@ -485,10 +485,10 @@ See [`risk/README.md`](risk/README.md) for the scoring rules and first results.
 - class-imbalance handling (capped sqrt weighting + tuned thresholds)
 - per-category evaluation vs TF-IDF and first error analysis
 - first rule-based risk-scoring layer (`risk/`): clause register, contract triage buckets, sensitivity analysis, and keyword rules from the error analysis (Change Of Control backstop, Termination For Convenience check)
+- expanded error analysis across all 19 risk-rubric categories; evidence-qualified model rules and rubric boundary clarifications (category tiers unchanged)
 
 ### In Progress
 
-- improving Change Of Control, Covenant Not To Sue and Termination For Convenience detection
 - more robust threshold selection (cross-validation instead of 40 validation contracts)
 - calibrating risk-score cutoffs for model confidences (the model currently under-ranks Medium contracts)
 

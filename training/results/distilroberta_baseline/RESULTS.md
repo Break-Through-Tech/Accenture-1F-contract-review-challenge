@@ -77,13 +77,46 @@ The full table is in `per_category_sqrt_weighted.csv`.
 
 ## Error Analysis
 
-From `error_analysis_sqrt_weighted.csv` (top 5 false positives and false negatives per category, with chunk text):
+The exported CSV contains the **top five chunk-level false positives and false negatives per category**, selected using tuned chunk thresholds. Its `n_errors_in_category` is the count of chunk errors, not contract errors. Risk scoring instead uses contract-level thresholds and max probability over chunks, so sampled rows diagnose language and localization patterns; they do not establish contract-level scoring precision. A high-confidence “false positive” chunk can coexist with a correctly labeled contract, and an annotated contract can have the model's best chunk somewhere unrelated to the clause.
 
-1. **Confusion from shared wording.** Covenant Not To Sue false positives are mostly *"covenant not to compete"* / non-compete sections. The model keys on "covenant … not to" rather than "sue". Change Of Control false positives are anti-assignment clauses that mention a party *"acquiring all or substantially all of such party's assets"*.
-2. **Unusual wording is missed.** Change Of Control false negatives include a "Future Acquisitions" pricing clause and acquisition-triggered milestone payments, where the term "change of control" never appears. Termination For Convenience misses short, informal clauses ("can be terminated at any time at the discretion of either party").
-3. **Termination over-triggering.** Termination For Convenience false positives are other termination sections (for death or disability, breach, expiration). The model learned "termination section" rather than "termination *without cause*".
-4. **Possible annotation gaps.** One Change Of Control "false positive" is a heading, *"11.3 Termination Upon Certain Changes of Control. [\*\*\*]"*, whose body is redacted, so CUAD has nothing to label. Some false positives may be correct and are worth a manual check before over-tuning.
-5. **Threshold instability on rare categories.** Third Party Beneficiary has exactly 5 validation positives (the minimum for tuning), and its tuned chunk threshold fell to 0.05, producing 835 false positive chunks. Treat its tuned chunk threshold as unreliable.
+### Risk-Rubric Categories
+
+Contract-level tuned F1 is reported below. Pattern descriptions refer to sampled chunk errors; where the sample is weak or ambiguous, the scoring rule is intentionally left alone. No category tier or level weight is changed by this analysis.
+
+| Category (F1) | False-positive / false-negative pattern and likely cause | Risk-rule decision |
+|---|---|---|
+| Cap On Liability (0.875) | FP chunks include broad indemnity/liability context; FN chunks can separate the cap or exception from the related obligation. Likely section overlap and chunk boundaries, not evidence that the category definition is wrong. | Stay unchanged; a cap's presence alone does not establish its adequacy. |
+| Uncapped Liability (0.600) | FP example overlaps a Cap On Liability clause; broad indemnity language can be mistaken for unlimited exposure. Few FNs (3 sampled error count) limit conclusions. | Refine model evidence qualification to require express uncapped/unlimited language tied to liability, damages, or indemnity. |
+| Insurance (0.915) | FP sample is a generic section heading; an FN is a high-level insurance-contract passage where the best chunk is unrelated to coverage requirements. Mostly heading/context and evidence-localization noise. | Stay unchanged. |
+| Liquidated Damages (0.667) | FP overlaps a liability-cap table; FNs include formula- or schedule-based consequences and post-termination amounts. Likely financial-remedy overlap and fragmented evidence. | Stay unchanged; amounts and triggers need clause-level review. |
+| Warranty Duration (0.600) | FP mentions initial term/continuations rather than a warranty period; FNs include short duration wording separated from the warranty. Likely term/warranty vocabulary overlap and localization. | Stay unchanged. |
+| Anti-Assignment (0.939) | Some FP rows expressly restrict assignment or transfers but allow affiliate/asset-sale exceptions; some may be annotation gaps. FN rows include genuine consent restrictions in contracts whose highest-probability chunk is unrelated. | Stay unchanged; strongest rubric-category result, and sampled “errors” do not justify an automatic assignment penalty adjustment. |
+| Change Of Control (0.368) | FP rows often describe an asset-sale exception in an assignment clause, not a control trigger with consequences; a redacted “termination upon changes of control” heading is annotation-ambiguous. FNs include acquisition/control provisions involving repayment, service limits, or notice, sometimes with unusual phrasing. | Refine: require a control/ownership event plus a contractual consequence, search all chunks, and retain matched evidence; allow a conservative named backstop. |
+| Renewal Term (0.719) | FP example is termination/expiration context; FNs include explicit renewal terms outside the selected chunk. Likely term/expiration overlap and chunk placement. | Stay unchanged; existing renewal-plus-notice combination already captures the most actionable interaction. |
+| Notice Period To Terminate Renewal (0.634) | FP examples can include generic notice or term/renewal passages; FNs can be in a separate renewal-notice section. Likely “notice” and “renewal” co-occurrence without a linked opt-out deadline, plus localization. | Refine model evidence qualification to link notice/deadline language to ending or declining renewal. |
+| Termination For Convenience (0.545) | FPs are breach, death/disability, expiration, or other termination grounds; FNs include short “at any time / discretion” language. The model overlearns termination-section vocabulary and misses paraphrases. | Refine model evidence qualification to require without-cause, convenience, any-reason, or discretionary termination language. |
+| Post-Termination Services (0.596) | Many FP chunks mention termination near ordinary survival/liquidated-damages language; FNs include continued supply or transition support. Likely broad termination/survival overlap and the distinction between surviving duties and actual services. | Refine model evidence qualification to require a service/support/performance obligation continuing after termination or expiry. |
+| License Grant (0.928) | Occasional FP is general IP/license context; FNs often occur in franchise or detailed grant text away from the top chunk. Strong contract-level precision/recall suggests chunk evidence is the main issue. | Stay unchanged. |
+| IP Ownership Assignment (0.667) | FP chunks overlap Anti-Assignment (assignment of a contract versus ownership of IP); FNs include substantive “ownership of materials” provisions. Likely overloaded “assignment/ownership” wording. | Clarify the distinction in the rubric; no separate scoring change. |
+| Non-Transferable License (0.588) | FPs share broad license/IP and exclusivity wording; FNs may describe limits on sublicensing or transfers without the category phrase. Likely overlap with License Grant and Anti-Assignment. | Clarify in the rubric; no scoring change without contract-level evidence. |
+| Non-Compete (0.590) | FPs overlap no-solicit, confidentiality, or other restrictive-covenant text; FNs are relatively few but may use narrow or indirect competition restrictions. Likely related-covenant vocabulary and boundaries. | Stay unchanged; the non-compete/exclusivity combination remains a review signal, not a legal conclusion. |
+| Exclusivity (0.667) | FP samples include license-grant and other commercial restrictions; FNs may express exclusivity through “sole” rights or territory/business terms. Likely semantic overlap and less canonical phrasing. | Stay unchanged; review context and party perspective before changing the High tier. |
+| Minimum Commitment (0.730) | FP snippets can be generic performance/expense language; FNs include quota or numeric schedule terms. Likely obligation-versus-minimum distinction and tables/chunking. | Stay unchanged; the existing combination with Exclusivity is a useful context flag. |
+| Revenue/Profit Sharing (0.737) | FPs overlap minimum commitments, royalties, or payment terms; FNs include percentage/royalty schedules and indirect revenue language. Likely commercial-payment overlap. | Stay unchanged. |
+| Audit Rights (0.821) | Few FPs; sampled FNs include audit-fee language or clauses whose audit right is elsewhere in the contract. Likely evidence localization, with no strong false-positive theme. | Stay unchanged. |
+
+### Broader Error Signals
+
+- **Overlap beyond the rubric:** Covenant Not To Sue false positives often contain “covenant not to compete”; Joint IP Ownership confuses general license/IP text; Non-Compete, No-Solicit, and Non-Disparagement share restrictive-covenant language. These categories are not all risk-scored, so the classifier errors do not justify changing rubric weights.
+- **Rare categories and thresholds:** Third Party Beneficiary's chunk threshold of 0.05 produces 835 chunk false positives; the category also has very poor contract-level precision. Most Favored Nation (3 test positives), Source Code Escrow (2), and Unlimited/All-You-Can-Eat License (3) have too little support for conclusions. Do not use these threshold/error samples to add risk rules.
+- **Evidence placement matters:** Some annotated Anti-Assignment, Change Of Control, renewal, and IP clauses appear in contracts where the reported top-scoring chunk is unrelated. Search all contract chunks for qualifying evidence before using a clause detection to alter confidence or risk points.
+
+### Decisions From This Review
+
+- The model-only evidence rules now cover Change Of Control, Termination For Convenience, Notice Period To Terminate Renewal, Post-Termination Services, and Uncapped Liability. They qualify model detections only when clause-specific wording is found somewhere in the contract's chunks; otherwise they downweight confidence. Change Of Control also has a conservative backstop requiring both a control/acquisition signal and a contractual consequence.
+- Every match, backstop, or downweight is named in the clause register, and the qualifying chunk is retained. Gold/annotation scoring, rubric category levels, weights, severity floor, bucket cutoffs, missing-protection rules, and combinations are unchanged.
+- Anti-Assignment stays unchanged. Its strong contract-level F1 and sampled genuine restrictions/possible annotation gaps argue against lowering its score or adding a lexical gate.
+- The rubric now distinguishes assignment of an agreement from ownership changes, generic termination from termination without cause, renewal notice from generic notice, and surviving duties from post-termination services.
 
 ## Decisions Made
 
@@ -104,8 +137,7 @@ From `error_analysis_sqrt_weighted.csv` (top 5 false positives and false negativ
 
 ## Recommended Next Steps
 
-1. Adopt `sqrt_weighted` + tuned contract thresholds as the baseline for the risk layer.
-2. Try more epochs: validation macro F1 was still rising at epoch 3 (0.26 → 0.40 → 0.41).
-3. Use 5-fold contract-level cross-validation on train to choose thresholds more robustly than 40 validation contracts allow.
-4. For Change Of Control, Covenant Not To Sue and Termination For Convenience, review the error rows with the advisor. Consider keyword features or a rule-based backstop for the risk layer.
-5. Try a larger or legal-domain encoder (e.g. `roberta-base`, `nlpaueb/legal-bert-base-uncased`) on Colab now that the pipeline is validated.
+1. When model prediction outputs and chunk data are available, rerun model-level risk scoring with the current evidence rules (for example, `python risk/score_contracts.py --source model --run training/outputs/sqrt_weighted`).
+2. Compare the revised rankings and risk buckets with the previous baseline, including rank correlation, bucket agreement and migrations, and the Change Of Control evidence-backstop precision/recall.
+3. As separate future model work, consider contract-level cross-validation for threshold selection and experiments with more epochs or a legal-domain encoder.
+4. Advisor or domain-expert review of the revised examples and risk rankings is optional future validation; it is not a prerequisite for completing this error-analysis and rule-refinement task.

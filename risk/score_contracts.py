@@ -21,7 +21,7 @@ Sources:
   --source model   predictions_test.npz from training/train_distilroberta.py, with
                    per-category contract thresholds from training/evaluate.py.
                    Contract confidence = max chunk probability; evidence = that chunk.
-                   Applies the keyword rules from risk_rules.json and compares the
+                   Applies evidence rules from risk_rules.json and compares the
                    ranking with the gold one.
 
 Writes to --out (default risk/outputs/<source>, gitignored):
@@ -31,7 +31,7 @@ Writes to --out (default risk/outputs/<source>, gitignored):
   sensitivity.csv         bucket changes and rank correlation under perturbed
                           cutoffs and weights
   model_vs_gold.csv       (model) rank correlation and bucket agreement with gold
-  keyword_rules_check.csv (model) effect of each keyword rule against annotations
+    evidence_rules_check.csv (model) precision/recall of evidence backstops
 
 Usage:
     python risk/score_contracts.py --source gold
@@ -79,7 +79,7 @@ def load_gold(path):
     return contracts
 
 
-def load_model(run, thresholds_path, chunks_path, scheme, keyword_rules):
+def load_model(run, thresholds_path, chunks_path, scheme, evidence_rules):
     """{title: {category: entry}} from saved test predictions (max probability over chunks)."""
     pred = np.load(Path(run) / "predictions_test.npz")
     categories = [str(c) for c in pred["categories"]]
@@ -94,8 +94,7 @@ def load_model(run, thresholds_path, chunks_path, scheme, keyword_rules):
     else:
         thresholds = [0.5] * len(categories)
 
-    backstops = {norm(r["category"]): r for r in keyword_rules.get("backstop", [])}
-    requires = {norm(r["category"]): r for r in keyword_rules.get("require", [])}
+    rules_by_category = {norm(r["category"]): r for r in evidence_rules}
 
     contracts = {}
     for title in pd.unique(titles):
@@ -104,19 +103,28 @@ def load_model(run, thresholds_path, chunks_path, scheme, keyword_rules):
         for i, cat in enumerate(categories):
             best = rows[probs[rows, i].argmax()]
             conf = float(probs[best, i])
+            rule = rules_by_category.get(norm(cat))
+            matching_rows = []
+            if rule:
+                matching_rows = [r for r in rows if re.search(rule["pattern"], texts[r])]
             if conf >= thresholds[i]:
                 entry = {"confidence": conf, "evidence": texts[best], "source": "model"}
-                rule = requires.get(norm(cat))
-                if rule and not re.search(rule["pattern"], texts[best], re.I):
+                if rule and matching_rows:
+                    entry["evidence"] = texts[matching_rows[0]]
+                    entry["rule_reason"] = f"Evidence rule matched: {rule['name']}"
+                    entry["source"] = "model, evidence rule matched"
+                elif rule:
                     entry["confidence"] = conf * rule["multiplier_if_missing"]
-                    entry["source"] = "model, downweighted (keyword missing)"
+                    entry["rule_reason"] = f"Evidence rule not found: {rule['name']}"
+                    entry["source"] = "model, evidence rule missing (downweighted)"
                 found[cat] = entry
-            elif norm(cat) in backstops:
-                rule = backstops[norm(cat)]
-                hits = [r for r in rows if re.search(rule["pattern"], texts[r], re.I)]
-                if hits:
-                    found[cat] = {"confidence": rule["confidence"], "evidence": texts[hits[0]],
-                                  "source": "keyword backstop"}
+            elif rule and matching_rows and "backstop_confidence" in rule:
+                found[cat] = {
+                    "confidence": rule["backstop_confidence"],
+                    "evidence": texts[matching_rows[0]],
+                    "source": "keyword backstop",
+                    "rule_reason": f"Evidence backstop matched: {rule['name']}",
+                }
         contracts[str(title)] = found
     return contracts
 
@@ -132,8 +140,9 @@ def score_contract(found, levels, rules):
         level = levels.get(norm(cat), (None, None))[0]
         points = weights[level] * entry["confidence"] if level else 0.0
         register.append({"category": levels.get(norm(cat), (None, cat))[1], "risk_level": level or "Unrated",
-                         "confidence": round(entry["confidence"], 3), "points": round(points, 3),
-                         "source": entry["source"], "evidence": entry["evidence"]})
+                 "confidence": round(entry["confidence"], 3), "points": round(points, 3),
+                 "source": entry["source"], "rule_reason": entry.get("rule_reason", ""),
+                 "evidence": entry["evidence"]})
         if points:
             reasons.append((f"{register[-1]['category']} ({level}, p={entry['confidence']:.2f})", points))
 
@@ -226,31 +235,30 @@ def sensitivity(contracts, train_gold, levels, rules, base):
     return pd.DataFrame(rows)
 
 
-def keyword_rules_check(model, gold, rules):
-    """Contract-level precision/recall of each keyword-rule category against annotations."""
+def evidence_rules_check(model, gold, rules):
+    """Contract-level precision/recall of each evidence backstop against annotations."""
     rows = []
-    kw = rules["keyword_rules"]
-    for rule in kw.get("backstop", []):
+    for rule in rules.get("evidence_rules", []):
+        if "backstop_confidence" not in rule:
+            continue
         cat = norm(rule["category"])
         truth = {t: any(norm(c) == cat for c in gold[t]) for t in model}
-        for label, keep in [("model only", lambda e: e["source"] != "keyword backstop"),
-                            ("model + keyword backstop", lambda e: True)]:
-            pred = {t: any(norm(c) == cat and keep(e) for c, e in found.items()) for t, found in model.items()}
-            tp = sum(pred[t] and truth[t] for t in model)
-            rows.append({"category": rule["category"], "rule": "backstop", "variant": label,
-                         "detected": sum(pred.values()), "true_positives": tp, "actual": sum(truth.values()),
-                         "precision": round(tp / max(sum(pred.values()), 1), 3),
-                         "recall": round(tp / max(sum(truth.values()), 1), 3)})
-    for rule in kw.get("require", []):
-        cat = norm(rule["category"])
-        for label, src in [("keyword found (kept)", "model"),
-                           ("keyword missing (downweighted)", "model, downweighted (keyword missing)")]:
-            titles = [t for t, found in model.items()
-                      if any(norm(c) == cat and e["source"] == src for c, e in found.items())]
-            tp = sum(any(norm(c) == cat for c in gold[t]) for t in titles)
-            rows.append({"category": rule["category"], "rule": "require", "variant": label,
-                         "detected": len(titles), "true_positives": tp, "actual": None,
-                         "precision": round(tp / max(len(titles), 1), 3), "recall": None})
+        variants = {
+            "model only": lambda entry: entry["source"] != "keyword backstop",
+            "model plus evidence backstop": lambda entry: True,
+        }
+        for label, keep in variants.items():
+            pred = {
+                title: any(norm(category) == cat and keep(entry)
+                           for category, entry in found.items())
+                for title, found in model.items()
+            }
+            true_positives = sum(pred[title] and truth[title] for title in model)
+            rows.append({"category": rule["category"], "rule": rule["name"],
+                         "variant": label, "detected": sum(pred.values()),
+                         "true_positives": true_positives, "actual": sum(truth.values()),
+                         "precision": round(true_positives / max(sum(pred.values()), 1), 3),
+                         "recall": round(true_positives / max(sum(truth.values()), 1), 3)})
     return pd.DataFrame(rows)
 
 
@@ -283,7 +291,7 @@ def main():
             ap.error("--run is required with --source model")
         name = Path(args.run).name
         thresholds = args.thresholds or REPO_ROOT / f"training/outputs/evaluation/thresholds_{name}.csv"
-        contracts = load_model(args.run, thresholds, args.chunks, args.threshold_scheme, rules["keyword_rules"])
+        contracts = load_model(args.run, thresholds, args.chunks, args.threshold_scheme, rules["evidence_rules"])
         out = Path(args.out or REPO_ROOT / f"risk/outputs/model_{name}")
     out.mkdir(parents=True, exist_ok=True)
 
@@ -324,13 +332,13 @@ def main():
         }])
         comparison.to_csv(out / "model_vs_gold.csv", index=False)
         crosstab = pd.crosstab(g["risk_bucket"].rename("gold"), base["risk_bucket"].rename("model"))
-        kw = keyword_rules_check(contracts, test_gold, rules)
-        kw.to_csv(out / "keyword_rules_check.csv", index=False)
+        evidence = evidence_rules_check(contracts, test_gold, rules)
+        evidence.to_csv(out / "evidence_rules_check.csv", index=False)
         print("\nModel vs gold (same rules and cutoffs):")
         print(comparison.to_string(index=False))
         print(crosstab.reindex(index=BUCKETS, columns=BUCKETS, fill_value=0).to_string())
-        print("\nKeyword rules vs annotations (contract level):")
-        print(kw.to_string(index=False))
+        print("\nEvidence backstops vs annotations (contract level):")
+        print(evidence.to_string(index=False))
 
     print(f"\nWrote risk scores to {out}")
 
