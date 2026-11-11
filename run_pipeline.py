@@ -217,7 +217,7 @@ def cmd_score(cfg, args):
     """Score contracts for risk, gold annotations or the trained model (score_contracts.py)."""
     paths, score_cfg = cfg["paths"], cfg["score"]
     manifest = load_manifest(cfg["run_name"])
-    source = score_cfg["source"]
+    source = args.source or score_cfg["source"]
     out_dir = resolve(paths["risk_out"]) / cfg["run_name"] / source
 
     cmd = [
@@ -312,6 +312,11 @@ def build_arg_parser():
             p.add_argument(
                 "--force", action="store_true",
                 help="Rerun every stage even if it already has a manifest entry.",
+            )
+        if name == "score":
+            p.add_argument(
+                "--source", choices=["gold", "model"], default=None,
+                help="Override score.source from the config for this run.",
             )
 
     return parser
