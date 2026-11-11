@@ -141,6 +141,8 @@ def cmd_prepare(cfg, args):
 
     manifest = load_manifest(cfg["run_name"])
     record_stage(manifest, "prepare", {
+        "run_name": cfg["run_name"],
+        "seed": cfg["seed"],
         "data_dir": str(data_dir),
         "chunking_config": chunking,
     })
@@ -173,10 +175,11 @@ def cmd_train(cfg, args):
 
     manifest = load_manifest(cfg["run_name"])
     record_stage(manifest, "train", {
+        "run_name": cfg["run_name"],
+        "seed": cfg["seed"],
         "run_dir": str(run_dir),
         "best_model_dir": str(run_dir / "best_model"),
         "predictions_test": str(run_dir / "predictions_test.npz"),
-        "seed": cfg["seed"],
         "model_config": model,
     })
     save_manifest(cfg["run_name"], manifest, args.dry_run)
@@ -206,6 +209,8 @@ def cmd_evaluate(cfg, args):
     # evaluate.py names its per-run files after the run directory's basename.
     thresholds_csv = eval_out / f"thresholds_{run_dir.name}.csv"
     record_stage(manifest, "evaluate", {
+        "run_name": cfg["run_name"],
+        "seed": cfg["seed"],
         "eval_out": str(eval_out),
         "thresholds_csv": str(thresholds_csv),
         "evaluate_config": ev,
@@ -249,6 +254,8 @@ def cmd_score(cfg, args):
     run_command(cmd, args.dry_run)
 
     record_stage(manifest, "score", {
+        "run_name": cfg["run_name"],
+        "seed": cfg["seed"],
         "source": source,
         "out": str(out_dir),
         "score_config": score_cfg,
@@ -265,16 +272,31 @@ STAGE_FUNCS = {
 }
 
 
+def stage_matches_config(entry, cfg, stage):
+    """Check whether a manifest entry for `stage` was actually produced by
+    the current config, not just a stage of the same name from a different
+    run_name, seed, or (for score) source. A gold score entry does not count
+    as "score already done" when the config now asks for a model score."""
+    if entry.get("run_name") != cfg["run_name"]:
+        return False
+    if entry.get("seed") != cfg["seed"]:
+        return False
+    if stage == "score" and entry.get("source") != cfg["score"]["source"]:
+        return False
+    return True
+
+
 def cmd_all(cfg, args):
     """Run prepare, train, evaluate and score in order.
 
-    Skips any stage that already has a manifest entry (from an earlier,
-    possibly interrupted run), unless --force is passed, so a crash after
-    training doesn't force a retrain.
+    Skips any stage whose manifest entry matches the current config (same
+    run_name/seed, and for score the same source), unless --force is
+    passed, so a crash after training doesn't force a retrain.
     """
     manifest = load_manifest(cfg["run_name"])
     for stage in STAGE_ORDER:
-        already_done = stage in manifest.get("stages", {})
+        entry = manifest.get("stages", {}).get(stage)
+        already_done = entry is not None and stage_matches_config(entry, cfg, stage)
         if already_done and not args.force:
             print(
                 f"Skipping '{stage}': already recorded in "
