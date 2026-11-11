@@ -1,0 +1,68 @@
+# Pipeline configuration for run_pipeline.py (Phase A of GitHub issue #23).
+#
+# This file is the single place that holds the paths and hyperparameters that
+# used to be scattered as command-line defaults across training/prepare_dataset.py,
+# training/train_distilroberta.py, training/evaluate.py and risk/score_contracts.py.
+# run_pipeline.py reads this file and builds the exact command for each stage,
+# so you don't have to remember run directory names or default file paths by hand.
+
+# A short name for this run. Used to name the training output directory
+# (paths.train_out/<run_name>), the risk output directory, and the manifest
+# file at runs/<run_name>/manifest.json.
+run_name: sqrt_weighted_run1
+
+# Random seed passed to training, and recorded in the manifest for reproducibility.
+seed: 42
+
+# Files and directories shared across stages. Relative paths are resolved
+# against the repository root (where this file lives), no matter which
+# directory you run run_pipeline.py from.
+paths:
+  train_json: data/cuad/train_separate_questions.json
+  test_json: data/cuad/test.json
+  rubric: evaluation/risk_categories.csv
+  rules: risk/risk_rules.json
+  data_dir: training/data        # prepare_dataset.py writes here; train_distilroberta.py reads from here
+  train_out: training/outputs    # the actual run directory is train_out/<run_name>
+  eval_out: training/outputs/evaluation
+  risk_out: risk/outputs         # the actual output directory is risk_out/<run_name>/<score.source>
+
+# Chunking settings.
+#
+# NOTE: training/prepare_dataset.py currently hardcodes the chunk strategy
+# (paragraph-aware, 480 tokens, 64-token overlap - see its CHUNK_KIND /
+# CHUNK_MAX_TOKENS / CHUNK_OVERLAP constants) and has no command-line flag for
+# it. The strategy/max_tokens/overlap values below are recorded here (and
+# copied into the manifest) for documentation only - run_pipeline.py does NOT
+# pass them as arguments, since prepare_dataset.py has nowhere to receive
+# them. Only tokenizer, max_length and min_train_positives are actually used.
+chunking:
+  strategy: paragraph
+  max_tokens: 480
+  overlap: 64
+  tokenizer: distilroberta-base
+  max_length: 512
+  min_train_positives: 10
+
+# Model training settings, passed straight through to train_distilroberta.py.
+model:
+  name: distilroberta-base
+  epochs: 3
+  batch_size: 16
+  lr: 3.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  threshold: 0.5
+  val_frac: 0.1
+  pos_weight_mode: sqrt    # none | raw | sqrt
+  pos_weight_cap: 30.0
+
+# Evaluation / threshold-tuning settings, passed straight through to evaluate.py.
+evaluate:
+  min_val_positives: 5
+  top_n_errors: 5
+
+# Risk-scoring settings, passed straight through to risk/score_contracts.py.
+score:
+  source: model             # gold | model
+  threshold_scheme: tuned   # tuned | 0.5
