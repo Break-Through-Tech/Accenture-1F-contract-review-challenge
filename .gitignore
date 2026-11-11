@@ -5,3 +5,4 @@ training/outputs/
 risk/outputs/
 training/*.log
 __pycache__/
+runs/
