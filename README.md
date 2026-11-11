@@ -464,6 +464,20 @@ python risk/score_contracts.py --source model --run training/outputs/sqrt_weight
 
 See [`risk/README.md`](risk/README.md) for the scoring rules and first results.
 
+### Run the Full Pipeline
+
+`run_pipeline.py` connects the four stages above (chunking, clause classification, threshold evaluation, risk scoring) into one command, driven by [`pipeline.yaml`](pipeline.yaml). It calls the existing scripts in `training/` and `risk/` with consistent arguments from the config, and records each stage's output paths in `runs/<run_name>/manifest.json` (gitignored) so later stages don't need the run directory name typed in by hand.
+
+```bash
+python run_pipeline.py prepare    # chunk + tokenize
+python run_pipeline.py train      # fine-tune DistilRoBERTa
+python run_pipeline.py evaluate   # tune thresholds
+python run_pipeline.py score      # risk-score contracts
+python run_pipeline.py all        # run all four in order
+```
+
+Add `--dry-run` to any command to print the exact commands and manifest it would write without running anything (useful for checking the wiring before a long training run). `all` skips any stage already recorded in the manifest; pass `--force` to rerun every stage anyway. Edit `pipeline.yaml` to change the run name, seed, model/training hyperparameters, or which risk-scoring source (`gold` or `model`) to use.
+
 ---
 
 ## Current Status
