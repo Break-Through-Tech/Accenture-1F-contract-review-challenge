@@ -326,6 +326,8 @@ def main():
     args = build_arg_parser().parse_args()
     if not hasattr(args, "force"):
         args.force = False  # only 'all' defines --force; it's unused by the single-stage commands
+    if not hasattr(args, "source"):
+        args.source = None  # only 'score' defines --source; 'all' also calls cmd_score(), so default it
 
     cfg = load_config(args.config)
     STAGE_FUNCS_WITH_ALL = {**STAGE_FUNCS, "all": cmd_all}
