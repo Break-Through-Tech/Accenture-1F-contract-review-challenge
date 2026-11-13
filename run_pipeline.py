@@ -94,22 +94,28 @@ def run_command(cmd, dry_run):
     subprocess.run(cmd, check=True, cwd=REPO_ROOT)
 
 
-def require_stage(manifest, stage, dry_run, fallback):
+def require_stage(manifest, stage, dry_run, fallback, hint=""):
     """Fetch a prior stage's manifest entry, or fail with a clear message.
 
     In a dry run there may be no real manifest yet (nothing was actually
     written), so we fall back to the path that stage *would* write, purely
     so --dry-run can show the full chain of commands without requiring you
     to have already run anything for real.
+
+    `hint` is an optional extra sentence appended to the failure message
+    (e.g. pointing at 'register' as an alternative to retraining).
     """
     if stage in manifest.get("stages", {}):
         return manifest["stages"][stage]
     if dry_run:
         return fallback
-    sys.exit(
+    msg = (
         f"'{stage}' stage is missing from runs/{manifest['run_name']}/manifest.json. "
         f"Run 'python run_pipeline.py {stage}' first."
     )
+    if hint:
+        msg += " " + hint
+    sys.exit(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +269,116 @@ def cmd_score(cfg, args):
     save_manifest(cfg["run_name"], manifest, args.dry_run)
 
 
+def cmd_infer(cfg, args):
+    """Classify and risk-score one raw contract file (inference/infer_contract.py).
+
+    Not part of 'all': this runs on demand against whatever model/thresholds
+    are already recorded in the manifest, instead of running a pipeline stage.
+    """
+    paths = cfg["paths"]
+    run_name = args.run_name or cfg["run_name"]
+    manifest = load_manifest(run_name)
+    hint = "Or run 'python run_pipeline.py register' to use an already-trained run."
+
+    fallback_run_dir = resolve(paths["train_out"]) / run_name
+    train_info = require_stage(
+        manifest, "train", args.dry_run,
+        {"best_model_dir": str(fallback_run_dir / "best_model")}, hint=hint,
+    )
+    fallback_thresholds = resolve(paths["eval_out"]) / f"thresholds_{run_name}.csv"
+    eval_info = require_stage(
+        manifest, "evaluate", args.dry_run,
+        {"thresholds_csv": str(fallback_thresholds)}, hint=hint,
+    )
+
+    best_model_dir = Path(train_info["best_model_dir"])
+    thresholds_csv = Path(eval_info["thresholds_csv"])
+
+    # labels.json's location comes from the manifest's 'prepare' stage when
+    # available (the data_dir that run actually wrote to); otherwise fall
+    # back to the configured default.
+    prepare_info = manifest.get("stages", {}).get("prepare")
+    data_dir = Path(prepare_info["data_dir"]) if prepare_info else resolve(paths["data_dir"])
+    labels_path = data_dir / "labels.json"
+
+    rubric_path = resolve(paths["rubric"])
+    rules_path = resolve(paths["rules"])
+    train_json = resolve(paths["train_json"])
+
+    if args.dry_run:
+        print(f"[dry-run] would run inference on {args.contract} with:")
+        for label, value in [
+            ("best_model_dir", best_model_dir), ("thresholds_csv", thresholds_csv),
+            ("labels_path", labels_path), ("rubric_path", rubric_path), ("rules_path", rules_path),
+        ]:
+            print(f"  {label} = {value}")
+        print("[dry-run] not executed")
+        return
+
+    # Imported lazily so plain pipeline stages (prepare/train/evaluate/score,
+    # and --dry-run above) don't need torch/transformers just to argparse.
+    from inference import infer_contract as infer_mod
+
+    medium, high, fresh = infer_mod.get_or_compute_cutoffs(manifest, rules_path, rubric_path, train_json)
+    if fresh is not None:
+        record_stage(manifest, "cutoffs", fresh)
+        save_manifest(run_name, manifest, args.dry_run)
+    print(f"Bucket cutoffs (runs/{run_name}/manifest.json): Medium >= {medium:.2f}, High >= {high:.2f}\n")
+
+    result = infer_mod.infer_contract(
+        args.contract, best_model_dir, labels_path, thresholds_csv, rubric_path, rules_path, (medium, high),
+    )
+
+    print(infer_mod.format_report(result))
+    payload = json.dumps(result, indent=2)
+    if args.out_json:
+        out_path = resolve(args.out_json)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(payload, encoding="utf-8")
+        print(f"\nWrote JSON to {out_path}")
+    else:
+        print("\nJSON:")
+        print(payload)
+
+
+def cmd_register(cfg, args):
+    """Record an existing trained run's paths in runs/<run-name>/manifest.json,
+    so a teammate's already-trained model can be used by 'infer' or 'score'
+    without rerunning prepare/train/evaluate locally."""
+    best_model_dir = resolve(args.best_model_dir)
+    thresholds_csv = resolve(args.thresholds_csv)
+    run_dir = resolve(args.run_dir) if args.run_dir else best_model_dir.parent
+    predictions_test = resolve(args.predictions_test) if args.predictions_test else None
+
+    to_check = {"--best-model-dir": best_model_dir, "--thresholds-csv": thresholds_csv}
+    if args.run_dir:
+        to_check["--run-dir"] = run_dir
+    if predictions_test:
+        to_check["--predictions-test"] = predictions_test
+    missing = [f"{flag} ({p})" for flag, p in to_check.items() if not p.exists()]
+    if missing:
+        sys.exit("register: path(s) do not exist:\n  " + "\n  ".join(missing))
+
+    manifest = load_manifest(args.run_name)
+    train_entry = {
+        "run_name": args.run_name,
+        "seed": args.seed,
+        "run_dir": str(run_dir),
+        "best_model_dir": str(best_model_dir),
+        "registered": True,
+    }
+    if predictions_test:
+        train_entry["predictions_test"] = str(predictions_test)
+    record_stage(manifest, "train", train_entry)
+    record_stage(manifest, "evaluate", {
+        "run_name": args.run_name,
+        "seed": args.seed,
+        "thresholds_csv": str(thresholds_csv),
+        "registered": True,
+    })
+    save_manifest(args.run_name, manifest, args.dry_run)
+
+
 STAGE_ORDER = ["prepare", "train", "evaluate", "score"]
 STAGE_FUNCS = {
     "prepare": cmd_prepare,
@@ -341,6 +457,35 @@ def build_arg_parser():
                 help="Override score.source from the config for this run.",
             )
 
+    infer_p = sub.add_parser("infer", help="Classify and risk-score one raw contract file.")
+    infer_p.add_argument("--contract", required=True, help="Path to a plain-text contract file.")
+    infer_p.add_argument(
+        "--run-name", default=None,
+        help="Override run_name from the config for this call (e.g. a registered run).",
+    )
+    infer_p.add_argument(
+        "--out-json", default=None,
+        help="Also write the JSON result to this path (default: print to stdout only).",
+    )
+    infer_p.add_argument(
+        "--dry-run", action="store_true",
+        help="Print the paths that would be used, without running inference.",
+    )
+
+    register_p = sub.add_parser(
+        "register", help="Record an existing trained run (model dir, thresholds) in the manifest.",
+    )
+    register_p.add_argument("--run-name", required=True, help="Run name to record this under.")
+    register_p.add_argument("--best-model-dir", required=True, help="Directory from model.save_pretrained().")
+    register_p.add_argument("--thresholds-csv", required=True, help="thresholds_<run>.csv from evaluate.py.")
+    register_p.add_argument("--run-dir", default=None, help="Training run directory (default: best-model-dir's parent).")
+    register_p.add_argument("--predictions-test", default=None, help="predictions_test.npz, if available.")
+    register_p.add_argument("--seed", type=int, default=None, help="Seed the run was trained with, for the record.")
+    register_p.add_argument(
+        "--dry-run", action="store_true",
+        help="Print the manifest entries that would be written, without writing them.",
+    )
+
     return parser
 
 
@@ -352,7 +497,7 @@ def main():
         args.source = None  # only 'score' defines --source; 'all' also calls cmd_score(), so default it
 
     cfg = load_config(args.config)
-    STAGE_FUNCS_WITH_ALL = {**STAGE_FUNCS, "all": cmd_all}
+    STAGE_FUNCS_WITH_ALL = {**STAGE_FUNCS, "all": cmd_all, "infer": cmd_infer, "register": cmd_register}
     STAGE_FUNCS_WITH_ALL[args.stage](cfg, args)
 
 
