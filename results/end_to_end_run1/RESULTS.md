@@ -18,8 +18,8 @@ python run_pipeline.py all
 - Macro F1 on the 19 risk categories: **0.702** with tuned thresholds (0.683 at the default 0.5 threshold).
 - On the 7 categories the TF-IDF baseline also covers: **0.713** for this model vs **0.592** for TF-IDF.
 - Macro F1 over all categories: **0.601**.
-- Strongest categories: Anti-Assignment 0.94, Insurance 0.94, Audit Rights 0.83.
-- Weakest categories: Change Of Control 0.36 and Termination For Convenience 0.53 — both below the TF-IDF baseline on those same categories.
+- Strongest categories (of the 19 risk categories): Insurance 0.94, Anti-Assignment 0.94, License Grant 0.94, Cap On Liability 0.88.
+- Weakest categories: Change Of Control 0.36, Uncapped Liability 0.51, Termination For Convenience 0.53. Change Of Control and Termination For Convenience are also below the TF-IDF baseline on those same categories.
 
 Source: `per_category_sqrt_weighted_run1.csv` and `run_summary.csv` in this folder.
 
