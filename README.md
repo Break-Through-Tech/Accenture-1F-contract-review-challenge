@@ -408,6 +408,9 @@ Actual clause-level risk may vary based on:
 │   ├── risk_rules.json
 │   └── README.md
 │
+├── inference/
+│   └── infer_contract.py
+│
 ├── Challenge-Project-Overview.md
 └── README.md
 ```
@@ -477,6 +480,31 @@ python run_pipeline.py all        # run all four in order
 ```
 
 Add `--dry-run` to any command to print the exact commands and manifest it would write without running anything (useful for checking the wiring before a long training run). `all` skips any stage already recorded in the manifest; pass `--force` to rerun every stage anyway. Edit `pipeline.yaml` to change the run name, seed, model/training hyperparameters, or which risk-scoring source (`gold` or `model`) to use.
+
+### Classify and Risk-Score One Contract
+
+`run_pipeline.py infer` runs a single raw contract file through the same steps as `score`, but one contract at a time instead of the whole CUAD test set: chunk it (`inference/infer_contract.py` reuses the Week 3 paragraph-aware chunker), classify each chunk with the trained model, apply the saved per-category thresholds and the `risk/risk_rules.json` evidence-rule checks, then score and bucket it.
+
+```bash
+python run_pipeline.py infer --contract path/to/raw_contract.txt
+```
+
+It reads `best_model_dir` and `thresholds_csv` from `runs/<run_name>/manifest.json` (written by `train`/`evaluate`), so training has to have run at least once first - the command fails with a clear message otherwise. The Low/Medium/High bucket cutoffs are percentiles of the 408 CUAD training contracts' scores (same as `score`'s); they're computed once and cached in the manifest's `cutoffs` entry instead of being rescored on every call.
+
+Output is a readable clause-by-clause printout (category, confidence, evidence text, points) followed by the same result as JSON; pass `--out-json path/to/result.json` to also save it to a file. `--run-name` overrides the run to use (for example, a teammate's run registered with the command below) without editing `pipeline.yaml`.
+
+### Register an Already-Trained Run
+
+If a teammate trained a model elsewhere, `register` records their run's paths in a manifest so `infer` (or `score`) can use it without repeating `prepare`/`train`/`evaluate` locally:
+
+```bash
+python run_pipeline.py register --run-name teammate_run \
+  --best-model-dir /path/to/their/best_model \
+  --thresholds-csv /path/to/their/thresholds_teammate_run.csv \
+  --predictions-test /path/to/their/predictions_test.npz
+```
+
+It checks that every given path actually exists before writing anything, and marks the manifest entries `"registered": true` so it's clear later that this run wasn't produced locally.
 
 ---
 
