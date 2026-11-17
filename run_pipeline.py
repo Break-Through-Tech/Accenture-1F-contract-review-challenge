@@ -227,9 +227,10 @@ def cmd_evaluate(cfg, args):
 def cmd_score(cfg, args):
     """Score contracts for risk, gold annotations or the trained model (score_contracts.py)."""
     paths, score_cfg = cfg["paths"], cfg["score"]
-    manifest = load_manifest(cfg["run_name"])
+    run_name = args.run_name or cfg["run_name"]
+    manifest = load_manifest(run_name)
     source = args.source or score_cfg["source"]
-    out_dir = resolve(paths["risk_out"]) / cfg["run_name"] / source
+    out_dir = resolve(paths["risk_out"]) / run_name / source
 
     cmd = [
         sys.executable, str(REPO_ROOT / "risk" / "score_contracts.py"),
@@ -242,9 +243,9 @@ def cmd_score(cfg, args):
     ]
 
     if source == "model":
-        fallback_run_dir = resolve(paths["train_out"]) / cfg["run_name"]
+        fallback_run_dir = resolve(paths["train_out"]) / run_name
         train_info = require_stage(manifest, "train", args.dry_run, {"run_dir": str(fallback_run_dir)})
-        fallback_thresholds = resolve(paths["eval_out"]) / f"thresholds_{cfg['run_name']}.csv"
+        fallback_thresholds = resolve(paths["eval_out"]) / f"thresholds_{run_name}.csv"
         eval_info = require_stage(manifest, "evaluate", args.dry_run, {"thresholds_csv": str(fallback_thresholds)})
 
         run_dir = Path(train_info["run_dir"])
@@ -260,13 +261,13 @@ def cmd_score(cfg, args):
     run_command(cmd, args.dry_run)
 
     record_stage(manifest, "score", {
-        "run_name": cfg["run_name"],
+        "run_name": run_name,
         "seed": cfg["seed"],
         "source": source,
         "out": str(out_dir),
         "score_config": score_cfg,
     })
-    save_manifest(cfg["run_name"], manifest, args.dry_run)
+    save_manifest(run_name, manifest, args.dry_run)
 
 
 def cmd_infer(cfg, args):
@@ -456,6 +457,10 @@ def build_arg_parser():
                 "--source", choices=["gold", "model"], default=None,
                 help="Override score.source from the config for this run.",
             )
+            p.add_argument(
+                "--run-name", default=None,
+                help="Override run_name from the config for this call (e.g. a registered run).",
+            )
 
     infer_p = sub.add_parser("infer", help="Classify and risk-score one raw contract file.")
     infer_p.add_argument("--contract", required=True, help="Path to a plain-text contract file.")
@@ -495,6 +500,8 @@ def main():
         args.force = False  # only 'all' defines --force; it's unused by the single-stage commands
     if not hasattr(args, "source"):
         args.source = None  # only 'score' defines --source; 'all' also calls cmd_score(), so default it
+    if not hasattr(args, "run_name"):
+        args.run_name = None  # 'score'/'infer'/'register' define --run-name; 'all' also calls cmd_score()
 
     cfg = load_config(args.config)
     STAGE_FUNCS_WITH_ALL = {**STAGE_FUNCS, "all": cmd_all, "infer": cmd_infer, "register": cmd_register}
