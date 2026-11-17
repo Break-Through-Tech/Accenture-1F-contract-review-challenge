@@ -1,0 +1,9 @@
+variant,contracts_changing_bucket,pct_changing_bucket,rank_corr_with_default,n_low,n_medium,n_high
+High cutoff top 15%,9,8.8,1.0,55,40,7
+High cutoff top 25%,4,3.9,1.0,53,31,18
+Medium band 25%,0,0.0,1.0,55,31,16
+Medium band 35%,2,2.0,1.0,53,33,16
+High weight 2,4,3.9,0.996,51,35,16
+High weight 4,2,2.0,0.998,55,33,14
+Medium weight 0.5,6,5.9,0.981,53,37,12
+Medium weight 1.5,2,2.0,0.995,55,33,14
