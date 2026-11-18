@@ -22,6 +22,7 @@ is the thin CLI wrapper around infer_contract().
 import importlib.util
 import json
 import tempfile
+from hashlib import sha256
 from pathlib import Path
 
 import numpy as np
@@ -155,7 +156,7 @@ def detect_clauses(contract_title, categories, probs, chunk_texts, thresholds_cs
             chunk_index=np.arange(len(chunk_texts)),
         )
         chunks_csv = tmp / "chunks.csv"
-        pd.DataFrame({"chunk_text": chunk_texts}).to_csv(chunks_csv, index=False)
+        pd.DataFrame({"chunk_text": chunk_texts, "contract_title": contract_title}).to_csv(chunks_csv, index=False)
         contracts = load_model(tmp, thresholds_csv, chunks_csv, scheme, evidence_rules)
     return contracts.get(contract_title, {})
 
@@ -170,14 +171,14 @@ def get_or_compute_cutoffs(manifest, rules_path, rubric_path, train_json_path):
     save); otherwise it's the dict the caller should record into the manifest's
     'cutoffs' stage.
     """
-    rules_path, rubric_path, train_json_path = str(rules_path), str(rubric_path), str(train_json_path)
+    inputs = {
+        "rules": rules_path,
+        "rubric": rubric_path,
+        "train_json": train_json_path,
+    }
+    input_hashes = {name: sha256(Path(path).read_bytes()).hexdigest() for name, path in inputs.items()}
     cached = manifest.get("stages", {}).get("cutoffs")
-    if (
-        cached
-        and cached.get("rules_path") == rules_path
-        and cached.get("rubric_path") == rubric_path
-        and cached.get("train_json") == train_json_path
-    ):
+    if cached and cached.get("input_hashes") == input_hashes:
         return cached["medium"], cached["high"], None
 
     rules = json.loads(Path(rules_path).read_text(encoding="utf-8"))
@@ -188,8 +189,9 @@ def get_or_compute_cutoffs(manifest, rules_path, rubric_path, train_json_path):
     medium, high = compute_cutoffs(train_df["score"], rules)
 
     info = {
-        "rules_path": rules_path, "rubric_path": rubric_path, "train_json": train_json_path,
-        "medium": round(float(medium), 4), "high": round(float(high), 4),
+        "input_hashes": input_hashes,
+        "medium": float(medium),
+        "high": float(high),
     }
     return info["medium"], info["high"], info
 
@@ -199,6 +201,7 @@ def score_and_bucket(found, levels, rules, cuts):
     risk.score_contracts.score_contract() and assign_buckets() exactly as the
     batch 'score' stage does."""
     score, reasons, floor, register = score_contract(found, levels, rules)
+    score = round(score, 3)
     one_row = pd.DataFrame([{"score": score, "severity_floor": floor}])
     bucket = assign_buckets(one_row, cuts, rules).iloc[0]
     return score, reasons, floor, register, bucket

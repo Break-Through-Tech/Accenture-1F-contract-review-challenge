@@ -462,7 +462,7 @@ For GPU training, use the provided Google Colab notebook and select a **T4 GPU**
 
 ```bash
 python risk/score_contracts.py --source gold
-python risk/score_contracts.py --source model --run training/outputs/sqrt_weighted
+python run_pipeline.py score --run-name sqrt_weighted_run1
 ```
 
 See [`risk/README.md`](risk/README.md) for the scoring rules and first results.
@@ -489,57 +489,50 @@ Add `--dry-run` to any command to print the exact commands and manifest it would
 python run_pipeline.py infer --contract path/to/raw_contract.txt
 ```
 
-It reads `best_model_dir` and `thresholds_csv` from `runs/<run_name>/manifest.json` (written by `train`/`evaluate`), so training has to have run at least once first - the command fails with a clear message otherwise. The Low/Medium/High bucket cutoffs are percentiles of the 408 CUAD training contracts' scores (same as `score`'s); they're computed once and cached in the manifest's `cutoffs` entry instead of being rescored on every call.
+It reads the checkpoint and thresholds from the local run manifest created by training and evaluation or by registration. Inference and batch scoring use the same percentile cutoffs from the 408 CUAD training contracts. Inference caches those cutoffs and recomputes them when the rules, rubric, or training data change.
 
 Output is a readable clause-by-clause printout (category, confidence, evidence text, points) followed by the same result as JSON; pass `--out-json path/to/result.json` to also save it to a file. `--run-name` overrides the run to use (for example, a teammate's run registered with the command below) without editing `pipeline.yaml`.
 
-### Register an Already-Trained Run
+### Reproduce the calibrated run with the existing bundle
 
-If a teammate trained a model elsewhere, `register` records their run's paths in a manifest so `infer` (or `score`) can use it without repeating `prepare`/`train`/`evaluate` locally:
+Use a virtual environment with `requirements.txt`. The local handoff checks
+used Python 3.14.7 on macOS arm64 with torch 2.15.0, transformers 5.22.1,
+NumPy 2.5.4, pandas 3.1.0, scikit-learn 1.9.1, and PyYAML 6.0.3.
+
+Obtain the team's checksum-verified bundle and place its contents under
+`training/outputs/sqrt_weighted/`. Use `RUN_INFO.md` to confirm the run.
+Each checkout creates its own manifest because registered paths are local.
+Run `prepare` only if the compatible generated chunks and labels are missing.
 
 ```bash
-python run_pipeline.py register --run-name teammate_run \
-  --best-model-dir /path/to/their/best_model \
-  --thresholds-csv /path/to/their/thresholds_teammate_run.csv \
-  --predictions-test /path/to/their/predictions_test.npz
+python run_pipeline.py prepare
+python run_pipeline.py register --run-name sqrt_weighted_run1 \
+  --best-model-dir training/outputs/sqrt_weighted/best_model \
+  --thresholds-csv training/outputs/sqrt_weighted/thresholds_sqrt_weighted.csv \
+  --predictions-test training/outputs/sqrt_weighted/predictions_test.npz
+python run_pipeline.py score --run-name sqrt_weighted_run1
+python run_pipeline.py infer --run-name sqrt_weighted_run1 --contract path/to/raw_contract.txt
+python -m unittest discover -s tests
 ```
 
-It checks that every given path actually exists before writing anything, and marks the manifest entries `"registered": true` so it's clear later that this run wasn't produced locally.
+Use `score` and `infer` for an existing model. The `all` command is the
+training workflow. Batch outputs go to `risk/outputs/sqrt_weighted_run1/model/`.
+Keep model weights, archives, generated chunks, and local manifests outside
+Git. See the [risk outputs guide](risk/README.md) for the CSV fields.
 
 ---
 
-## Current Status
+## Current status
 
-### Completed
+The TF-IDF and DistilRoBERTa baselines, imbalance handling, threshold tuning,
+error analysis, batch scoring, and single-contract inference are complete.
+The [calibration report](evaluation/risk_calibration.md) records the
+validation-selected settings and the single held-out comparison. CUAD
+annotations provide clause-presence labels. The project still needs independent
+advisor judgments to validate review priority.
 
-- CUAD data exploration
-- JSON → DataFrame conversion
-- class imbalance analysis
-- category-level EDA
-- cleaning investigation
-- chunking experiments
-- TF-IDF + Logistic Regression baseline
-- initial Low / Medium / High risk rubric
-- paragraph-aware tokenization pipeline
-- DistilRoBERTa training pipeline implementation
-- final tokenized dataset generated and validated (chunker token-count fix, ~99% span coverage)
-- initial DistilRoBERTa baseline trained (unweighted and sqrt-weighted)
-- class-imbalance handling (capped sqrt weighting + tuned thresholds)
-- per-category evaluation vs TF-IDF and first error analysis
-- first rule-based risk-scoring layer (`risk/`): clause register, contract triage buckets, sensitivity analysis, and keyword rules from the error analysis (Change Of Control backstop, Termination For Convenience check)
-- expanded error analysis across all 19 risk-rubric categories; evidence-qualified model rules and rubric boundary clarifications (category tiers unchanged)
-
-### In Progress
-
-- more robust threshold selection (cross-validation instead of 40 validation contracts)
-- calibrating risk-score cutoffs for model confidences (the model currently under-ranks Medium contracts)
-
-### Next Steps
-
-- review error-analysis rows with the advisor
-- confirm the "four signals" and the risk weights with the advisor
-- validate risk rankings with advisor-reviewed examples
-- integrate classification and risk scoring into an end-to-end pipeline
+The [readiness checklist](evaluation/readiness.md) covers advisor ranking
+validation, the targeted Change Of Control check, and the December handoff.
 
 ---
 
@@ -557,7 +550,7 @@ Both **chunk-level** and **contract-level** performance are considered.
 
 Contract-level transformer scores are generated by aggregating predictions across a contract's chunks.
 
-For the future risk-scoring layer, planned evaluation includes comparison against advisor-ranked examples using:
+Advisor validation of the current risk-scoring layer will use:
 
 - ranking agreement
 - bucket agreement
