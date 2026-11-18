@@ -15,21 +15,38 @@ class EvidenceRuleTests(unittest.TestCase):
         rules_path = Path(__file__).parents[1] / "risk" / "risk_rules.json"
         cls.evidence_rules = json.loads(rules_path.read_text(encoding="utf-8"))["evidence_rules"]
 
-    def load_predictions(self, categories, probabilities, texts):
+    def load_predictions(self, categories, probabilities, texts, split="test", chunk_title="sample-contract"):
         temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)
         root = Path(temp_dir.name)
         np.savez(
-            root / "predictions_test.npz",
+            root / f"predictions_{split}.npz",
             categories=np.asarray(categories),
             probs=np.asarray(probabilities, dtype=float),
             contract_title=np.asarray(["sample-contract"] * len(texts)),
             chunk_index=np.arange(len(texts)),
         )
-        pd.DataFrame({"chunk_text": texts}).to_csv(root / "chunks.csv", index=False)
+        pd.DataFrame({"chunk_text": texts, "contract_title": chunk_title}).to_csv(root / "chunks.csv", index=False)
         pd.DataFrame({"category": categories, "level": ["contract"] * len(categories),
                       "threshold": [0.5] * len(categories)}).to_csv(root / "thresholds.csv", index=False)
-        return load_model(root, root / "thresholds.csv", root / "chunks.csv", "tuned", self.evidence_rules)
+        return load_model(root, root / "thresholds.csv", root / "chunks.csv", "tuned",
+                          self.evidence_rules, split=split)
+
+    def test_mismatched_prediction_chunk_title_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "chunk titles do not align"):
+            self.load_predictions(
+                ["Change Of Control"], [[0.8]], ["Contract text."],
+                chunk_title="different-contract",
+            )
+
+    def test_validation_predictions_can_be_loaded_separately(self):
+        contracts = self.load_predictions(
+            ["Change Of Control"], [[0.1]],
+            ["Following a merger, the counterparty may terminate this agreement."],
+            split="val",
+        )
+
+        self.assertEqual(contracts["sample-contract"]["Change Of Control"]["source"], "keyword backstop")
 
     def test_change_of_control_uses_matching_non_top_chunk_as_evidence(self):
         contracts = self.load_predictions(
@@ -52,8 +69,18 @@ class EvidenceRuleTests(unittest.TestCase):
 
         entry = contracts["sample-contract"]["Change Of Control"]
         self.assertEqual(entry["source"], "keyword backstop")
-        self.assertEqual(entry["confidence"], 0.5)
+        self.assertEqual(entry["confidence"], 0.6)
         self.assertIn("Evidence backstop matched", entry["rule_reason"])
+
+    def test_change_of_control_detection_without_evidence_uses_calibrated_multiplier(self):
+        contracts = self.load_predictions(
+            ["Change Of Control"], [[0.8]],
+            ["Either party may terminate for material breach."],
+        )
+
+        entry = contracts["sample-contract"]["Change Of Control"]
+        self.assertEqual(entry["source"], "model, evidence rule missing (downweighted)")
+        self.assertAlmostEqual(entry["confidence"], 0.08)
 
     def test_asset_assignment_exception_alone_does_not_trigger_change_of_control(self):
         contracts = self.load_predictions(

@@ -59,8 +59,8 @@
 			"category": "Change Of Control",
 			"name": "Control or ownership event with contractual consequence",
 			"pattern": "(?is)(?=.*(?:change\\s+of\\s+control|change\\s+in\\s+control|controlling\\s+interest|change\\s+of\\s+ownership|merger|acquir\\w*[\\s\\S]{0,100}(?:control|ownership|equity|stock|shares|company|business|financial\\s+institution)|(?:control|ownership|equity|stock|shares|company|business)[\\s\\S]{0,100}acquir\\w*))(?=.*(?:terminate|consent|repa(?:y|id|ment)|accelerat|forfeit|restrict|continue\\s+to\\s+provide|notice\\s+of))",
-			"multiplier_if_missing": 0.25,
-			"backstop_confidence": 0.5
+			"multiplier_if_missing": 0.1,
+			"backstop_confidence": 0.6
 		},
 		{
 			"category": "Termination For Convenience",

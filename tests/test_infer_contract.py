@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from inference.infer_contract import chunk_contract, detect_clauses, get_or_compute_cutoffs, score_and_bucket
-from risk.score_contracts import norm
+from risk.score_contracts import assign_buckets, norm, score_all
 
 
 class FakeTokenizer:
@@ -139,38 +139,34 @@ class ScoreAndBucketTests(unittest.TestCase):
         self.assertEqual(bucket, "High")
 
 
-class CutoffCachingTests(unittest.TestCase):
-    def test_cached_cutoffs_are_returned_without_recomputing(self):
-        manifest = {
-            "stages": {
-                "cutoffs": {
-                    "rules_path": "rules.json",
-                    "rubric_path": "rubric.csv",
-                    "train_json": "/does/not/exist.json",
-                    "medium": 10.0,
-                    "high": 16.0,
-                }
-            }
-        }
-        # train_json points nowhere real; if this weren't a cache hit,
-        # load_gold() would raise trying to read it.
-        medium, high, info = get_or_compute_cutoffs(manifest, "rules.json", "rubric.csv", "/does/not/exist.json")
-        self.assertEqual((medium, high, info), (10.0, 16.0, None))
+    def test_boundary_bucket_matches_batch_score_rounding(self):
+        found = {"Cap On Liability": {"confidence": 0.9996, "evidence": "e", "source": "model"}}
+        cuts = (1.0, 2.0)
+        batch, _ = score_all({"example": found}, self.levels, self.rules)
+        score, _, _, _, bucket = score_and_bucket(found, self.levels, self.rules, cuts)
+        self.assertEqual(score, batch["score"].iloc[0])
+        self.assertEqual(bucket, assign_buckets(batch, cuts, self.rules).iloc[0])
+        self.assertEqual(bucket, "Medium")
 
-    def test_mismatched_cache_entry_is_not_reused(self):
-        manifest = {
-            "stages": {
-                "cutoffs": {
-                    "rules_path": "old_rules.json",
-                    "rubric_path": "rubric.csv",
-                    "train_json": "/does/not/exist.json",
-                    "medium": 10.0,
-                    "high": 16.0,
-                }
-            }
-        }
-        with self.assertRaises(FileNotFoundError):
-            get_or_compute_cutoffs(manifest, "new_rules.json", "rubric.csv", "/does/not/exist.json")
+
+class CutoffCachingTests(unittest.TestCase):
+    def test_content_change_invalidates_cutoffs_at_the_same_path(self):
+        repo = Path(__file__).resolve().parents[1]
+        rubric = repo / "evaluation/risk_categories.csv"
+        gold = repo / "data/cuad/train_separate_questions.json"
+        rules = json.loads((repo / "risk/risk_rules.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps(rules), encoding="utf-8")
+            medium, high, info = get_or_compute_cutoffs({}, path, rubric, gold)
+            manifest = {"stages": {"cutoffs": info}}
+            self.assertEqual(get_or_compute_cutoffs(manifest, path, rubric, gold), (medium, high, None))
+
+            rules["level_weights"]["High"] *= 2
+            path.write_text(json.dumps(rules), encoding="utf-8")
+            _, new_high, updated = get_or_compute_cutoffs(manifest, path, rubric, gold)
+            self.assertGreater(new_high, high)
+            self.assertNotEqual(updated["input_hashes"], info["input_hashes"])
 
 
 if __name__ == "__main__":

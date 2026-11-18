@@ -77,6 +77,16 @@ class ScoreRunNameTests(unittest.TestCase):
         self.assertEqual(self.flag(cmd, "--run"), "/outputs/registered")
         self.assertEqual(self.flag(cmd, "--thresholds"), "/eval/thresholds_registered.csv")
 
+    def test_score_uses_registered_prediction_path(self):
+        self.write_manifest("registered", "/outputs/registered", "/eval/thresholds.csv")
+        path = self.runs / "registered" / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest["stages"]["train"]["predictions_test"] = "/predictions/custom.npz"
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        self.assertEqual(self.flag(self.score("registered"), "--predictions"),
+                         "/predictions/custom.npz")
+
     def test_run_name_override_changes_the_output_directory(self):
         self.write_manifest("registered", "/outputs/registered", "/eval/thresholds_registered.csv")
 

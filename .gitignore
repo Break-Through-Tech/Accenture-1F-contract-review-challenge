@@ -6,3 +6,7 @@ risk/outputs/
 training/*.log
 __pycache__/
 runs/
+/data/sqrt_weighted/
+
+# Local trained-model downloads
+sqrt_weighted_distilroberta_*.zip

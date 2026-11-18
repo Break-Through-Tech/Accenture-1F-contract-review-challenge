@@ -79,13 +79,28 @@ def load_gold(path):
     return contracts
 
 
-def load_model(run, thresholds_path, chunks_path, scheme, evidence_rules):
-    """{title: {category: entry}} from saved test predictions (max probability over chunks)."""
-    pred = np.load(Path(run) / "predictions_test.npz")
-    categories = [str(c) for c in pred["categories"]]
-    probs, titles = pred["probs"], pred["contract_title"]
+def load_model(run, thresholds_path, chunks_path, scheme, evidence_rules, split="test",
+               predictions_path=None):
+    """{title: {category: entry}} from saved split predictions (max probability over chunks)."""
+    path = predictions_path or Path(run) / f"predictions_{split}.npz"
+    with np.load(path) as pred:
+        categories = [str(c) for c in pred["categories"]]
+        probs, titles = pred["probs"], pred["contract_title"]
+        indices = pred["chunk_index"]
     chunks = pd.read_csv(chunks_path)
-    texts = chunks["chunk_text"].iloc[pred["chunk_index"]].to_numpy()
+    if (
+        not np.issubdtype(indices.dtype, np.integer)
+        or indices.shape != titles.shape
+        or (indices < 0).any()
+        or (indices >= len(chunks)).any()
+    ):
+        raise ValueError(f"Prediction chunk indices are invalid for {chunks_path}")
+    matched_chunks = chunks.iloc[indices]
+    if "contract_title" in chunks and not np.array_equal(
+        matched_chunks["contract_title"].astype(str).to_numpy(), titles.astype(str)
+    ):
+        raise ValueError(f"Prediction chunk titles do not align with {chunks_path}")
+    texts = matched_chunks["chunk_text"].to_numpy()
 
     if scheme == "tuned":
         th = pd.read_csv(thresholds_path)
@@ -266,6 +281,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", choices=["gold", "model"], required=True)
     ap.add_argument("--run", help="run directory from train_distilroberta.py (model source)")
+    ap.add_argument("--predictions", help="explicit test predictions NPZ (defaults to the run directory)")
     ap.add_argument("--thresholds", help="thresholds_<run>.csv from evaluate.py "
                     "(default training/outputs/evaluation/thresholds_<run name>.csv)")
     ap.add_argument("--threshold-scheme", choices=["tuned", "0.5"], default="tuned")
@@ -291,7 +307,8 @@ def main():
             ap.error("--run is required with --source model")
         name = Path(args.run).name
         thresholds = args.thresholds or REPO_ROOT / f"training/outputs/evaluation/thresholds_{name}.csv"
-        contracts = load_model(args.run, thresholds, args.chunks, args.threshold_scheme, rules["evidence_rules"])
+        contracts = load_model(args.run, thresholds, args.chunks, args.threshold_scheme,
+                               rules["evidence_rules"], predictions_path=args.predictions)
         out = Path(args.out or REPO_ROOT / f"risk/outputs/model_{name}")
     out.mkdir(parents=True, exist_ok=True)
 

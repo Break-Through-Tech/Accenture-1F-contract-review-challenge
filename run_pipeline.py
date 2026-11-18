@@ -258,6 +258,9 @@ def cmd_score(cfg, args):
             "--chunks", str(data_dir / "test_chunks.csv"),
         ]
 
+        if train_info.get("predictions_test"):
+            cmd += ["--predictions", train_info["predictions_test"]]
+
     run_command(cmd, args.dry_run)
 
     record_stage(manifest, "score", {
